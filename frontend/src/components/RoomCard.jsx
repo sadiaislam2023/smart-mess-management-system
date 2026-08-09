@@ -1,38 +1,20 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { useEffect, useState } from "react";
 
 import roomService from "../services/roomService";
-import {
-  requestReservation,
-  getReservationStatus,
-} from "../services/reservationService";
 
-const RoomCard = ({ room }) => {
+// onArchived: optional callback(roomId) so the parent list can remove
+// this card / refetch without a full page reload. If not passed, falls
+// back to the original reload behavior.
+const RoomCard = ({ room, onArchived }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [isArchiving, setIsArchiving] = useState(false);
 
-  const occupiedBeds =
-    room.beds?.filter((bed) => bed.occupied).length || 0;
-
-  const totalBeds = room.beds?.length || 0;
-
-  const [reservationStatus, setReservationStatus] = useState(null);
-
-  useEffect(() => {
-    if (user?.role === "student") {
-      loadReservationStatus();
-    }
-  }, [room._id, user]);
-
-  const loadReservationStatus = async () => {
-    try {
-      const res = await getReservationStatus(room._id);
-      setReservationStatus(res.status);
-    } catch (err) {
-      console.log(err);
-    }
-  };
+  const activeBeds = room.beds?.filter((bed) => !bed.isArchived) || [];
+  const occupiedBeds = activeBeds.filter((bed) => bed.occupied).length;
+  const totalBeds = activeBeds.length;
 
   const deleteRoom = async () => {
     const confirmDelete = window.confirm(
@@ -41,47 +23,19 @@ const RoomCard = ({ room }) => {
 
     if (!confirmDelete) return;
 
+    setIsArchiving(true);
     try {
       await roomService.archiveRoom(room._id);
-      alert("Room archived successfully.");
-      window.location.reload();
-    } catch (error) {
-      console.log(error);
-      alert("Failed to archive room.");
-    }
-  };
-
-  const reserveRoom = async () => {
-    try {
-      const availableBed = room.beds.find(
-        (bed) => !bed.occupied
-      );
-
-      let res;
-
-      if (availableBed) {
-        res = await requestReservation({
-          roomId: room._id,
-          bedNumber: availableBed.bedNumber,
-        });
+      if (onArchived) {
+        onArchived(room._id);
       } else {
-        res = await requestReservation({
-          roomId: room._id,
-        });
+        window.location.reload();
       }
-
-      alert(res.message);
-
-      // Change button immediately
-      setReservationStatus("pending");
-
     } catch (error) {
-      console.log(error);
-
-      alert(
-        error.response?.data?.message ||
-          "Reservation failed."
-      );
+      console.error(error);
+      alert("Failed to archive room.");
+    } finally {
+      setIsArchiving(false);
     }
   };
 
@@ -94,7 +48,7 @@ const RoomCard = ({ room }) => {
           <img
             src={room.images[0].url}
             className="card-img-top"
-            alt="Room"
+            alt={`Room ${room.roomNumber}`}
             style={{
               height: "220px",
               objectFit: "cover",
@@ -173,33 +127,6 @@ const RoomCard = ({ room }) => {
               View Details
             </button>
 
-            {/* STUDENT BUTTON */}
-
-            {user?.role === "student" && (
-
-              <button
-                className={`btn w-100 mb-2 ${
-                  reservationStatus === "approved"
-                    ? "btn-success"
-                    : reservationStatus === "pending"
-                    ? "btn-warning"
-                    : "btn-primary"
-                }`}
-                disabled={
-                  reservationStatus === "approved" ||
-                  reservationStatus === "pending"
-                }
-                onClick={reserveRoom}
-              >
-                {reservationStatus === "approved"
-                  ? "✅ Reserved"
-                  : reservationStatus === "pending"
-                  ? "⏳ Request Pending"
-                  : "🛏 Reserve Bed"}
-              </button>
-
-            )}
-
             {/* MANAGER */}
 
             {user?.role === "manager" && (
@@ -216,8 +143,9 @@ const RoomCard = ({ room }) => {
                 <button
                   className="btn btn-danger w-100"
                   onClick={deleteRoom}
+                  disabled={isArchiving}
                 >
-                  Archive Room
+                  {isArchiving ? "Archiving..." : "Archive Room"}
                 </button>
               </>
             )}

@@ -7,6 +7,7 @@ import {
 function MyReservations() {
   const [reservations, setReservations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [processingId, setProcessingId] = useState(null);
 
   useEffect(() => {
     loadReservations();
@@ -15,35 +16,93 @@ function MyReservations() {
   const loadReservations = async () => {
     try {
       const res = await getMyReservations();
-      setReservations(res.reservations || []);
+
+      setReservations(
+        res.reservations || []
+      );
     } catch (error) {
-      console.log(error);
-      alert("Failed to load reservations.");
+      console.error(error);
+
+      alert(
+        "Failed to load reservations."
+      );
     } finally {
       setLoading(false);
     }
   };
 
   const handleCancel = async (id) => {
-    const confirmCancel = window.confirm(
-      "Are you sure you want to cancel this reservation?"
-    );
+    const confirmCancel =
+      window.confirm(
+        "Are you sure you want to cancel this reservation?"
+      );
 
-    if (!confirmCancel) return;
+    if (!confirmCancel) {
+      return;
+    }
+
+    setProcessingId(id);
 
     try {
-      const res = await cancelReservation(id);
+      const res =
+        await cancelReservation(id);
 
       alert(res.message);
 
-      loadReservations();
+      await loadReservations();
     } catch (error) {
       alert(
         error.response?.data?.message ||
           "Failed to cancel reservation."
       );
+    } finally {
+      setProcessingId(null);
     }
   };
+
+  // =======================================================
+  // FORMAT DATE + TIME
+  // =======================================================
+
+  const formatDateTime = (date) => {
+    if (!date) {
+      return "-";
+    }
+
+    return new Date(date).toLocaleString(
+      "en-BD",
+      {
+        year: "numeric",
+        month: "short",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true,
+      }
+    );
+  };
+
+  // =======================================================
+  // CHECK HOLD EXPIRATION
+  // =======================================================
+
+  const isHoldExpired = (
+    holdExpiresAt
+  ) => {
+    if (!holdExpiresAt) {
+      return false;
+    }
+
+    return (
+      new Date(holdExpiresAt) <
+      new Date()
+    );
+  };
+
+  // =======================================================
+  // RENDER
+  // =======================================================
 
   return (
     <div className="container mt-5">
@@ -70,90 +129,274 @@ function MyReservations() {
       ) : reservations.length === 0 ? (
 
         <div className="alert alert-info">
-
           You have no reservations.
-
         </div>
 
       ) : (
 
-        <table className="table table-bordered table-hover">
+        <div className="table-responsive">
 
-          <thead className="table-dark">
+          <table className="table table-bordered table-hover align-middle">
 
-            <tr>
+            <thead className="table-dark">
 
-              <th>Room</th>
+              <tr>
 
-              <th>Bed</th>
+                <th>
+                  Room
+                </th>
 
-              <th>Status</th>
+                <th>
+                  Bed
+                </th>
 
-              <th>Requested On</th>
+                <th>
+                  Status
+                </th>
 
-              <th>Action</th>
+                <th>
+                  Details
+                </th>
 
-            </tr>
+                <th>
+                  Requested On
+                </th>
 
-          </thead>
-
-          <tbody>
-
-            {reservations.map((reservation) => (
-
-              <tr key={reservation._id}>
-
-                <td>
-
-                  {reservation.room?.roomNumber}
-
-                </td>
-
-                <td>
-
-                  {reservation.bedNumber}
-
-                </td>
-
-                <td>
-
-                  {reservation.status}
-
-                </td>
-
-                <td>
-
-                  {new Date(
-                    reservation.createdAt
-                  ).toLocaleDateString()}
-
-                </td>
-
-                <td>
-
-                  {(reservation.status === "pending" ||
-                    reservation.status === "approved") && (
-
-                    <button
-                      className="btn btn-danger btn-sm"
-                      onClick={() =>
-                        handleCancel(reservation._id)
-                      }
-                    >
-                      Cancel
-                    </button>
-
-                  )}
-
-                </td>
+                <th>
+                  Action
+                </th>
 
               </tr>
 
-            ))}
+            </thead>
 
-          </tbody>
+            <tbody>
 
-        </table>
+              {reservations.map(
+                (reservation) => {
+
+                  const holdExpired =
+                    isHoldExpired(
+                      reservation.holdExpiresAt
+                    );
+
+                  return (
+
+                    <tr
+                      key={
+                        reservation._id
+                      }
+                    >
+
+                      {/* ROOM */}
+
+                      <td>
+                        {reservation.room
+                          ?.roomNumber ||
+                          "-"}
+                      </td>
+
+
+                      {/* BED */}
+
+                      <td>
+                        {
+                          reservation.bedNumber
+                        }
+                      </td>
+
+
+                      {/* STATUS */}
+
+                      <td>
+
+                        <span
+                          className={`badge ${
+                            reservation.status ===
+                            "approved"
+                              ? "bg-success"
+                              : reservation.status ===
+                                "pending"
+                              ? "bg-warning text-dark"
+                              : reservation.status ===
+                                "rejected"
+                              ? "bg-danger"
+                              : reservation.status ===
+                                "expired"
+                              ? "bg-secondary"
+                              : "bg-dark"
+                          }`}
+                        >
+
+                          {
+                            reservation.status
+                          }
+
+                        </span>
+
+                      </td>
+
+
+                      {/* DETAILS */}
+
+                      <td className="small">
+
+                        {reservation.status ===
+                          "pending" &&
+                          reservation.holdExpiresAt && (
+
+                            <div
+                              className={
+                                holdExpired
+                                  ? "text-danger fw-bold"
+                                  : "text-muted"
+                              }
+                            >
+
+                              <strong>
+                                Hold expires:
+                              </strong>{" "}
+
+                              {formatDateTime(
+                                reservation.holdExpiresAt
+                              )}
+
+                              {holdExpired && (
+                                <span className="ms-1">
+                                  (expired)
+                                </span>
+                              )}
+
+                            </div>
+                          )}
+
+
+                        {reservation.status ===
+                          "rejected" &&
+                          reservation.rejectionReason && (
+
+                            <div className="text-danger">
+
+                              <strong>
+                                Reason:
+                              </strong>{" "}
+
+                              {
+                                reservation.rejectionReason
+                              }
+
+                            </div>
+                          )}
+
+
+                        {reservation.status ===
+                          "approved" && (
+
+                            <span className="text-success">
+                              Reservation approved.
+                            </span>
+                          )}
+
+
+                        {reservation.status ===
+                          "cancelled" && (
+
+                            <span className="text-muted">
+                              Reservation cancelled.
+                            </span>
+                          )}
+
+
+                        {reservation.status ===
+                          "expired" && (
+
+                            <span className="text-danger">
+                              Reservation hold expired.
+                            </span>
+                          )}
+
+                      </td>
+
+
+                      {/* REQUESTED DATE + TIME */}
+
+                      <td>
+
+                        {formatDateTime(
+                          reservation.createdAt
+                        )}
+
+                      </td>
+
+
+                      {/* ACTION */}
+
+                      <td>
+
+                        {(reservation.status ===
+                          "pending" ||
+                          reservation.status ===
+                            "approved") && (
+
+                          <button
+                            className="btn btn-danger btn-sm"
+                            disabled={
+                              processingId ===
+                              reservation._id
+                            }
+                            onClick={() =>
+                              handleCancel(
+                                reservation._id
+                              )
+                            }
+                          >
+
+                            {processingId ===
+                            reservation._id
+                              ? "Cancelling..."
+                              : "Cancel"}
+
+                          </button>
+
+                        )}
+
+                        {reservation.status ===
+                          "expired" && (
+
+                          <span className="text-muted">
+                            No action
+                          </span>
+                        )}
+
+                        {reservation.status ===
+                          "rejected" && (
+
+                          <span className="text-muted">
+                            No action
+                          </span>
+                        )}
+
+                        {reservation.status ===
+                          "cancelled" && (
+
+                          <span className="text-muted">
+                            Cancelled
+                          </span>
+                        )}
+
+                      </td>
+
+                    </tr>
+
+                  );
+                }
+              )}
+
+            </tbody>
+
+          </table>
+
+        </div>
 
       )}
 

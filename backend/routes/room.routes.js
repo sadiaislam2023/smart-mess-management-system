@@ -17,9 +17,14 @@ const {
 } = require("../controllers/room.controller");
 
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, "uploads/"),
+  destination: (req, file, cb) =>
+    cb(null, "uploads/"),
+
   filename: (req, file, cb) =>
-    cb(null, Date.now() + "-" + file.originalname),
+    cb(
+      null,
+      Date.now() + "-" + file.originalname
+    ),
 });
 
 const upload = multer({ storage });
@@ -27,10 +32,17 @@ const upload = multer({ storage });
 /* ================= ROOM ================= */
 
 router.post("/", createRoom);
+
 router.get("/", getRooms);
+
 router.get("/:id", getRoomById);
+
 router.put("/:id", updateRoom);
-router.patch("/:id/archive", archiveRoom);
+
+router.patch(
+  "/:id/archive",
+  archiveRoom
+);
 
 /* ================= IMAGES ================= */
 
@@ -47,9 +59,15 @@ router.delete(
 
 /* ================= BEDS ================= */
 
-router.post("/:id/beds", addBed);
+router.post(
+  "/:id/beds",
+  addBed
+);
 
-router.put("/:id/beds/:bedId", updateBed);
+router.put(
+  "/:id/beds/:bedId",
+  updateBed
+);
 
 router.patch(
   "/:id/beds/:bedId/archive",

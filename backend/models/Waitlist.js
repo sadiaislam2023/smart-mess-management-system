@@ -1,58 +1,108 @@
 const mongoose = require("mongoose");
 
 const waitlistSchema = new mongoose.Schema(
-  {
-    // Student waiting for a bed
-    student: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
+    {
+        student: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            required: true,
+        },
 
-    // Room the student wanted
-    room: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Room",
-      required: true,
-    },
+        room: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Room",
+            required: true,
+        },
 
-    // Preferences (from Living Needs Profile)
-    budget: {
-      type: Number,
-      required: true,
-    },
+        bedNumber: {
+            type: String,
+            required: true,
+        },
 
-    roommatePreference: {
-      type: String,
-      default: "",
-    },
+        budget: {
+            type: Number,
+            required: true,
+        },
 
-    spacePreference: {
-      type: String,
-      default: "",
-    },
+        roommatePreference: {
+            type: String,
+            default: "",
+        },
 
-    // Waiting status
-    status: {
-      type: String,
-      enum: ["waiting", "matched", "allocated"],
-      default: "waiting",
-    },
+        spacePreference: {
+            type: Number,
+            default: null,
+        },
 
-    // Notification
-    notified: {
-      type: Boolean,
-      default: false,
-    },
+        status: {
+            type: String,
+            enum: [
+                "waiting",
+                "matched",
+                "allocated",
+                "cancelled",
+                "expired",
+            ],
+            default: "waiting",
+        },
 
-    notificationMessage: {
-      type: String,
-      default: "",
+        notified: {
+            type: Boolean,
+            default: false,
+        },
+
+        notificationMessage: {
+            type: String,
+            default: "",
+        },
+
+        // When the student received the 24-hour priority
+        matchedAt: {
+            type: Date,
+            default: null,
+        },
+
+        // Exact time when the student's 24-hour priority expires
+        matchedUntil: {
+            type: Date,
+            default: null,
+        },
     },
-  },
-  {
-    timestamps: true,
-  }
+    {
+        timestamps: true,
+    }
 );
 
-module.exports = mongoose.model("Waitlist", waitlistSchema);
+
+// ===========================================================
+// INDEXES
+// ===========================================================
+
+waitlistSchema.index({
+    room: 1,
+    bedNumber: 1,
+    status: 1,
+});
+
+waitlistSchema.index({
+    student: 1,
+    status: 1,
+});
+
+waitlistSchema.index({
+    room: 1,
+    bedNumber: 1,
+    createdAt: 1,
+});
+
+waitlistSchema.index({
+    status: 1,
+    matchedUntil: 1,
+});
+
+
+module.exports =
+    mongoose.model(
+        "Waitlist",
+        waitlistSchema
+    );

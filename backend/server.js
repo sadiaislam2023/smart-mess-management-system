@@ -1,152 +1,200 @@
 const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
-const connectDB = require("./config/db");
 const path = require("path");
-const waitlistRoutes = require("./routes/waitlist.routes");
+
+const connectDB =
+    require("./config/db");
+
+const {
+    startWaitlistJob,
+} = require("./utils/waitlist.job");
 
 
-
-// Load env
 dotenv.config();
 
 
-// Connect Database
+// ===========================================================
+// DATABASE
+// ===========================================================
+
 connectDB();
 
 
-
-const app = express();
-
-
-app.use("/api/waitlist", waitlistRoutes);
-
-/* =========================
-   MIDDLEWARE
-========================= */
+const app =
+    express();
 
 
-app.use(cors());
+// ===========================================================
+// MIDDLEWARE
+// ===========================================================
 
-
-// Increase request size limit
 app.use(
-  express.json({
-    limit: "15mb",
-  })
+    cors()
 );
 
 
 app.use(
-  express.urlencoded({
-    extended: true,
-    limit: "20mb",
-  })
-);
-
-
-// Static uploads folder
-app.use(
-  "/uploads",
-  express.static(
-    path.join(__dirname, "uploads")
-  )
-);
-
-
-
-
-
-/* =========================
-   ROUTES
-========================= */
-
-
-const authRoutes = require("./routes/auth.routes");
-const adminRoutes = require("./routes/admin.routes");
-const profileRoutes = require("./routes/profile.routes");
-const roomRoutes = require("./routes/room.routes");
-const onboardingRoutes = require("./routes/onboarding.routes");
-const spaceFitRoutes = require("./routes/spaceFit.routes");
-const reservationRoutes = require("./routes/reservation.routes");
-const analyticsRoutes = require("./routes/analytics.routes");
-
-
-
-app.use("/api/analytics", analyticsRoutes);
-
-
-app.use(
-  "/api/auth",
-  authRoutes
+    express.json({
+        limit:
+            "15mb",
+    })
 );
 
 
 app.use(
-  "/api/admin",
-  adminRoutes
+    express.urlencoded({
+        extended:
+            true,
+
+        limit:
+            "20mb",
+    })
+);
+
+
+// ===========================================================
+// STATIC UPLOADS
+// ===========================================================
+
+app.use(
+    "/uploads",
+    express.static(
+        path.join(
+            __dirname,
+            "uploads"
+        )
+    )
+);
+
+
+// ===========================================================
+// ROUTES
+// ===========================================================
+
+const authRoutes =
+    require("./routes/auth.routes");
+
+const adminRoutes =
+    require("./routes/admin.routes");
+
+const profileRoutes =
+    require("./routes/profile.routes");
+
+const roomRoutes =
+    require("./routes/room.routes");
+
+const onboardingRoutes =
+    require("./routes/onboarding.routes");
+
+const spaceFitRoutes =
+    require("./routes/spaceFit.routes");
+
+const reservationRoutes =
+    require("./routes/reservation.routes");
+
+const analyticsRoutes =
+    require("./routes/analytics.routes");
+
+const waitlistRoutes =
+    require("./routes/waitlist.routes");
+
+
+// ===========================================================
+// API ROUTES
+// ===========================================================
+
+app.use(
+    "/api/analytics",
+    analyticsRoutes
 );
 
 
 app.use(
-  "/api/profile",
-  profileRoutes
+    "/api/auth",
+    authRoutes
 );
 
 
 app.use(
-  "/api/rooms",
-  roomRoutes
+    "/api/admin",
+    adminRoutes
 );
 
 
 app.use(
-  "/api/onboarding",
-  onboardingRoutes
+    "/api/profile",
+    profileRoutes
 );
 
 
 app.use(
-  "/api/spacefit",
-  spaceFitRoutes
+    "/api/rooms",
+    roomRoutes
 );
 
-app.use("/api/reservations", reservationRoutes);
+
+app.use(
+    "/api/onboarding",
+    onboardingRoutes
+);
 
 
-
-/* =========================
-   TEST ROUTE
-========================= */
-
-
-app.get("/", (req, res) => {
-
-  res.send(
-    "Smart Mess Management API is running..."
-  );
-
-});
+app.use(
+    "/api/spacefit",
+    spaceFitRoutes
+);
 
 
+app.use(
+    "/api/reservations",
+    reservationRoutes
+);
 
 
+app.use(
+    "/api/waitlist",
+    waitlistRoutes
+);
 
 
-/* =========================
-   SERVER START
-========================= */
+// ===========================================================
+// TEST
+// ===========================================================
 
+app.get(
+    "/",
+    (req, res) => {
+
+        res.send(
+            "Smart Mess Management API is running..."
+        );
+    }
+);
+
+
+// ===========================================================
+// START WAITLIST JOB
+// ===========================================================
+
+startWaitlistJob();
+
+
+// ===========================================================
+// SERVER
+// ===========================================================
 
 const PORT =
-  process.env.PORT || 5000;
+    process.env.PORT ||
+    5000;
 
 
+app.listen(
+    PORT,
+    () => {
 
-app.listen(PORT, () => {
-
-  console.log(
-    `Server is running on port ${PORT}`
-  );
-
-});
+        console.log(
+            `Server is running on port ${PORT}`
+        );
+    }
+);

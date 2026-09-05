@@ -1,5 +1,13 @@
-import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import {
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
+
+import {
+  useNavigate,
+  useParams,
+} from "react-router-dom";
 
 import CampusRouteMap from "../components/CampusRouteMap";
 import RoomLayout from "../components/RoomLayout";
@@ -77,18 +85,24 @@ const RoomDetails = () => {
 
     const loadRoom = async () => {
       try {
-        const res = await roomService.getRoom(id);
+        const res =
+          await roomService.getRoom(id);
 
         if (!active) return;
 
-        const loadedRoom = res.data.room;
+        const loadedRoom =
+          res.data.room;
 
         setRoom(loadedRoom);
 
         const savedBedId =
-          getSelectedBedId(loadedRoom._id);
+          getSelectedBedId(
+            loadedRoom._id
+          );
 
-        setSelectedBedId(savedBedId);
+        setSelectedBedId(
+          savedBedId
+        );
       } catch (error) {
         console.error(
           "Failed to load room:",
@@ -115,52 +129,59 @@ const RoomDetails = () => {
   useEffect(() => {
     let active = true;
 
-    const refreshRoomAutomatically = async () => {
-      try {
-        const res =
-          await roomService.getRoom(id);
+    const refreshRoomAutomatically =
+      async () => {
+        try {
+          const res =
+            await roomService.getRoom(id);
 
-        if (!active) return;
+          if (!active) return;
 
-        const updatedRoom = res.data.room;
+          const updatedRoom =
+            res.data.room;
 
-        setRoom(updatedRoom);
+          setRoom(updatedRoom);
 
-        const updatedActiveBeds =
-          (updatedRoom.beds || []).filter(
-            (bed) => !bed.isArchived
-          );
+          const updatedActiveBeds =
+            (
+              updatedRoom.beds ||
+              []
+            ).filter(
+              (bed) =>
+                !bed.isArchived
+            );
 
-        const selectedBedStillExists =
-          updatedActiveBeds.some(
-            (bed) =>
-              bedSelectionKey(bed) ===
-              selectedBedId
-          );
+          const selectedBedStillExists =
+            updatedActiveBeds.some(
+              (bed) =>
+                bedSelectionKey(bed) ===
+                selectedBedId
+            );
 
-        if (
-          selectedBedId &&
-          !selectedBedStillExists
-        ) {
-          setSelectedBedId(null);
+          if (
+            selectedBedId &&
+            !selectedBedStillExists
+          ) {
+            setSelectedBedId(null);
 
-          saveSelectedBedId(
-            updatedRoom._id,
-            null
+            saveSelectedBedId(
+              updatedRoom._id,
+              null
+            );
+          }
+        } catch (error) {
+          console.error(
+            "Automatic room refresh failed:",
+            error
           );
         }
-      } catch (error) {
-        console.error(
-          "Automatic room refresh failed:",
-          error
-        );
-      }
-    };
+      };
 
-    const interval = setInterval(
-      refreshRoomAutomatically,
-      ROOM_REFRESH_INTERVAL
-    );
+    const interval =
+      setInterval(
+        refreshRoomAutomatically,
+        ROOM_REFRESH_INTERVAL
+      );
 
     return () => {
       active = false;
@@ -172,65 +193,80 @@ const RoomDetails = () => {
      CHECK STUDENT ELIGIBILITY
   ========================================================= */
 
-  const checkEligibility = async (
-    isMounted = true
-  ) => {
-    if (!isStudent) {
-      if (isMounted) {
-        setCheckingEligibility(false);
-      }
+  const checkEligibility =
+    useCallback(
+      async (
+        isMounted = true
+      ) => {
+        if (!isStudent) {
+          if (isMounted) {
+            setCheckingEligibility(
+              false
+            );
+          }
 
-      return;
-    }
+          return;
+        }
 
-    try {
-      const [
-        reservationsRes,
-        waitlistRes,
-      ] = await Promise.all([
-        getMyReservations(),
-        getWaitlist(),
-      ]);
+        try {
+          const [
+            reservationsRes,
+            waitlistRes,
+          ] =
+            await Promise.all([
+              getMyReservations(),
+              getWaitlist(),
+            ]);
 
-      if (!isMounted) return;
+          if (!isMounted) return;
 
-      const activeReservation =
-        (
-          reservationsRes.reservations || []
-        ).some((reservation) =>
-          ACTIVE_RESERVATION_STATUSES.includes(
-            reservation.status
-          )
-        );
+          const activeReservation =
+            (
+              reservationsRes.reservations ||
+              []
+            ).some(
+              (reservation) =>
+                ACTIVE_RESERVATION_STATUSES.includes(
+                  reservation.status
+                )
+            );
 
-      const activeWaitlist =
-        (
-          waitlistRes.waitlist || []
-        ).some((entry) =>
-          ACTIVE_WAITLIST_STATUSES.includes(
-            entry.status
-          )
-        );
+          const activeWaitlist =
+            (
+              waitlistRes.waitlist ||
+              []
+            ).some(
+              (entry) =>
+                ACTIVE_WAITLIST_STATUSES.includes(
+                  entry.status
+                )
+            );
 
-      setHasActiveRequest(
-        activeReservation ||
-          activeWaitlist
-      );
-    } catch (error) {
-      console.error(
-        "Eligibility check failed:",
-        error
-      );
+          setHasActiveRequest(
+            activeReservation ||
+              activeWaitlist
+          );
+        } catch (error) {
+          console.error(
+            "Eligibility check failed:",
+            error
+          );
 
-      if (isMounted) {
-        setHasActiveRequest(false);
-      }
-    } finally {
-      if (isMounted) {
-        setCheckingEligibility(false);
-      }
-    }
-  };
+          if (isMounted) {
+            setHasActiveRequest(
+              false
+            );
+          }
+        } finally {
+          if (isMounted) {
+            setCheckingEligibility(
+              false
+            );
+          }
+        }
+      },
+      [isStudent]
+    );
 
   /* =========================================================
      INITIAL ELIGIBILITY CHECK
@@ -244,7 +280,7 @@ const RoomDetails = () => {
     return () => {
       active = false;
     };
-  }, [user, isStudent]);
+  }, [checkEligibility]);
 
   /* =========================================================
      AUTOMATIC ELIGIBILITY REFRESH
@@ -257,39 +293,47 @@ const RoomDetails = () => {
 
     let active = true;
 
-    const interval = setInterval(() => {
-      checkEligibility(active);
-    }, ELIGIBILITY_REFRESH_INTERVAL);
+    const interval =
+      setInterval(() => {
+        checkEligibility(active);
+      }, ELIGIBILITY_REFRESH_INTERVAL);
 
     return () => {
       active = false;
       clearInterval(interval);
     };
-  }, [isStudent, user]);
+  }, [
+    isStudent,
+    checkEligibility,
+  ]);
 
   /* =========================================================
      MANUAL ROOM REFRESH
   ========================================================= */
 
-  const refreshRoom = async () => {
-    try {
-      const res =
-        await roomService.getRoom(id);
+  const refreshRoom =
+    async () => {
+      try {
+        const res =
+          await roomService.getRoom(
+            id
+          );
 
-      const updatedRoom = res.data.room;
+        const updatedRoom =
+          res.data.room;
 
-      setRoom(updatedRoom);
+        setRoom(updatedRoom);
 
-      return updatedRoom;
-    } catch (error) {
-      console.error(
-        "Failed to refresh room:",
-        error
-      );
+        return updatedRoom;
+      } catch (error) {
+        console.error(
+          "Failed to refresh room:",
+          error
+        );
 
-      return null;
-    }
-  };
+        return null;
+      }
+    };
 
   /* =========================================================
      LOADING
@@ -336,8 +380,8 @@ const RoomDetails = () => {
           </h5>
 
           <p className="text-muted mb-0">
-            Please wait while the room information
-            is loaded.
+            Please wait while the room
+            information is loaded.
           </p>
         </div>
       </div>
@@ -387,7 +431,8 @@ const RoomDetails = () => {
             </h3>
 
             <p className="text-muted mb-4">
-              The requested room could not be found.
+              The requested room could
+              not be found.
             </p>
 
             <button
@@ -397,7 +442,9 @@ const RoomDetails = () => {
                 background:
                   "linear-gradient(135deg, #6D597A, #8B6F9E)",
               }}
-              onClick={() => navigate(-1)}
+              onClick={() =>
+                navigate(-1)
+              }
             >
               Go Back
             </button>
@@ -420,7 +467,8 @@ const RoomDetails = () => {
      BED STATISTICS
   ========================================================= */
 
-  const totalBeds = activeBeds.length;
+  const totalBeds =
+    activeBeds.length;
 
   const occupiedBeds =
     activeBeds.filter(
@@ -466,116 +514,124 @@ const RoomDetails = () => {
      SELECT BED
   ========================================================= */
 
-  const selectBed = (bed) => {
-    if (selectionLocked) {
-      return;
-    }
+  const selectBed =
+    (bed) => {
+      if (selectionLocked) {
+        return;
+      }
 
-    const bedId =
-      bedSelectionKey(bed);
+      const bedId =
+        bedSelectionKey(bed);
 
-    const isSelected =
-      selectedBedId === bedId;
+      const isSelected =
+        selectedBedId === bedId;
 
-    if (isSelected) {
-      setSelectedBedId(null);
+      if (isSelected) {
+        setSelectedBedId(null);
+
+        saveSelectedBedId(
+          room._id,
+          null
+        );
+
+        return;
+      }
+
+      setSelectedBedId(
+        bedId
+      );
 
       saveSelectedBedId(
         room._id,
-        null
+        bedId
       );
-
-      return;
-    }
-
-    setSelectedBedId(bedId);
-
-    saveSelectedBedId(
-      room._id,
-      bedId
-    );
-  };
+    };
 
   /* =========================================================
      REQUEST AVAILABLE BED / JOIN WAITLIST
   ========================================================= */
 
-  const handleRequest = async () => {
-    if (
-      !selectedBed ||
-      selectionLocked
-    ) {
-      return;
-    }
+  const handleRequest =
+    async () => {
+      if (
+        !selectedBed ||
+        selectionLocked
+      ) {
+        return;
+      }
 
-    if (
-      !selectedBed.occupied &&
-      !selectedBed.onHold
-    ) {
-      navigate(
-        `/rooms/${room._id}/request-bed`,
-        {
-          state: {
+      if (
+        !selectedBed.occupied &&
+        !selectedBed.onHold
+      ) {
+        navigate(
+          `/rooms/${room._id}/request-bed`,
+          {
+            state: {
+              bedNumber:
+                selectedBed.bedNumber,
+              roomNumber:
+                room.roomNumber,
+            },
+          }
+        );
+
+        return;
+      }
+
+      setSubmitting(true);
+
+      try {
+        const res =
+          await requestWaitlist({
+            roomId: room._id,
             bedNumber:
               selectedBed.bedNumber,
-            roomNumber:
-              room.roomNumber,
-          },
-        }
-      );
+          });
 
-      return;
-    }
+        alert(
+          res.message ||
+            "You have been added to the waitlist."
+        );
 
-    setSubmitting(true);
+        setHasActiveRequest(
+          true
+        );
 
-    try {
-      const res =
-        await requestWaitlist({
-          roomId: room._id,
-          bedNumber:
-            selectedBed.bedNumber,
-        });
+        setSelectedBedId(null);
 
-      alert(
-        res.message ||
-          "You have been added to the waitlist."
-      );
+        saveSelectedBedId(
+          room._id,
+          null
+        );
 
-      setHasActiveRequest(true);
+        await refreshRoom();
+      } catch (error) {
+        console.error(
+          "Bed request failed:",
+          error
+        );
 
-      setSelectedBedId(null);
+        alert(
+          error.response?.data
+            ?.message ||
+            "Something went wrong."
+        );
 
-      saveSelectedBedId(
-        room._id,
-        null
-      );
+        await refreshRoom();
+      } finally {
+        setSubmitting(false);
 
-      await refreshRoom();
-    } catch (error) {
-      console.error(
-        "Bed request failed:",
-        error
-      );
-
-      alert(
-        error.response?.data?.message ||
-          "Something went wrong."
-      );
-
-      await refreshRoom();
-    } finally {
-      setSubmitting(false);
-
-      await checkEligibility();
-    }
-  };
+        await checkEligibility();
+      }
+    };
 
   /* =========================================================
      REQUEST BUTTON LABEL
   ========================================================= */
 
-  let requestButtonLabel = null;
+  let requestButtonLabel =
+    null;
 
   if (selectedBed) {
     if (
@@ -766,7 +822,8 @@ const RoomDetails = () => {
                   }}
                 >
                   Floor{" "}
-                  {room.floor?.number || "-"}
+                  {room.floor?.number ||
+                    "-"}
 
                   <span className="mx-2">
                     •
@@ -851,10 +908,14 @@ const RoomDetails = () => {
                 {room.images?.length > 0 ? (
                   <div className="row g-3">
                     {room.images.map(
-                      (img, index) => (
+                      (
+                        img,
+                        index
+                      ) => (
                         <div
                           className={
-                            room.images.length ===
+                            room.images
+                              .length ===
                             1
                               ? "col-12"
                               : "col-12 col-md-6"
@@ -868,7 +929,8 @@ const RoomDetails = () => {
                             className="overflow-hidden rounded-4"
                             style={{
                               height:
-                                room.images.length ===
+                                room.images
+                                  .length ===
                                 1
                                   ? "360px"
                                   : "210px",
@@ -877,7 +939,9 @@ const RoomDetails = () => {
                             }}
                           >
                             <img
-                              src={img.url}
+                              src={
+                                img.url
+                              }
                               alt={`Room ${room.roomNumber} ${index + 1}`}
                               className="w-100 h-100"
                               style={{
@@ -895,7 +959,8 @@ const RoomDetails = () => {
                     className="rounded-4 d-flex align-items-center justify-content-center text-center"
                     style={{
                       height: "300px",
-                      background: "#F8F5FA",
+                      background:
+                        "#F8F5FA",
                       border:
                         "1px dashed #D9CFDE",
                     }}
@@ -904,15 +969,17 @@ const RoomDetails = () => {
                       <div
                         className="fw-semibold mb-1"
                         style={{
-                          color: "#665A6B",
+                          color:
+                            "#665A6B",
                         }}
                       >
                         No Room Images
                       </div>
 
                       <small className="text-muted">
-                        No photos have been
-                        added for this room.
+                        No photos have
+                        been added for
+                        this room.
                       </small>
                     </div>
                   </div>
@@ -949,7 +1016,10 @@ const RoomDetails = () => {
                         "-",
                     ],
                   ].map(
-                    ([label, value]) => (
+                    ([
+                      label,
+                      value,
+                    ]) => (
                       <div
                         key={label}
                         className="rounded-4 p-3"
@@ -963,7 +1033,8 @@ const RoomDetails = () => {
                         <small
                           className="text-muted d-block mb-1"
                           style={{
-                            fontSize: "11px",
+                            fontSize:
+                              "11px",
                             textTransform:
                               "uppercase",
                             letterSpacing:
@@ -998,7 +1069,8 @@ const RoomDetails = () => {
                     <small
                       className="text-muted d-block mb-1"
                       style={{
-                        fontSize: "11px",
+                        fontSize:
+                          "11px",
                         textTransform:
                           "uppercase",
                         letterSpacing:
@@ -1011,8 +1083,10 @@ const RoomDetails = () => {
                     <div
                       className="fw-bold"
                       style={{
-                        color: "#5F4A6B",
-                        fontSize: "24px",
+                        color:
+                          "#5F4A6B",
+                        fontSize:
+                          "24px",
                       }}
                     >
                       ৳{room.rent || 0}
@@ -1051,7 +1125,8 @@ const RoomDetails = () => {
                 ],
                 [
                   "Bathroom",
-                  room.bathroomType || "-",
+                  room.bathroomType ||
+                    "-",
                 ],
                 [
                   "Natural Light",
@@ -1065,7 +1140,8 @@ const RoomDetails = () => {
                 ],
                 [
                   "Utility Policy",
-                  room.utilityPolicy || "-",
+                  room.utilityPolicy ||
+                    "-",
                 ],
                 [
                   "Amenities",
@@ -1076,7 +1152,10 @@ const RoomDetails = () => {
                     : "None",
                 ],
               ].map(
-                ([label, value]) => (
+                ([
+                  label,
+                  value,
+                ]) => (
                   <div
                     className="col-12 col-sm-6 col-lg-3"
                     key={label}
@@ -1093,7 +1172,8 @@ const RoomDetails = () => {
                       <small
                         className="text-muted d-block mb-2"
                         style={{
-                          fontSize: "11px",
+                          fontSize:
+                            "11px",
                           fontWeight: 600,
                           textTransform:
                             "uppercase",
@@ -1109,7 +1189,8 @@ const RoomDetails = () => {
                         style={{
                           color:
                             "#443A48",
-                          lineHeight: 1.5,
+                          lineHeight:
+                            1.5,
                         }}
                       >
                         {value}
@@ -1148,7 +1229,8 @@ const RoomDetails = () => {
                   <div
                     className="fw-bold mb-2"
                     style={{
-                      color: "#7C5A17",
+                      color:
+                        "#7C5A17",
                     }}
                   >
                     Active Request
@@ -1156,16 +1238,22 @@ const RoomDetails = () => {
 
                   <div
                     style={{
-                      color: "#75643F",
-                      fontSize: "14px",
-                      lineHeight: 1.6,
+                      color:
+                        "#75643F",
+                      fontSize:
+                        "14px",
+                      lineHeight:
+                        1.6,
                     }}
                   >
-                    You already have an active
-                    reservation or waitlist
-                    request. You cannot request
-                    or join another bed until your
-                    current request is resolved.
+                    You already have an
+                    active reservation
+                    or waitlist
+                    request. You
+                    cannot request or
+                    join another bed
+                    until your current
+                    request is resolved.
                   </div>
                 </div>
               )}
@@ -1185,7 +1273,9 @@ const RoomDetails = () => {
                 selectedBedId={
                   selectedBedId
                 }
-                onSelectBed={selectBed}
+                onSelectBed={
+                  selectBed
+                }
                 selectionDisabled={
                   selectionLocked
                 }
@@ -1242,11 +1332,15 @@ const RoomDetails = () => {
                         }}
                       >
                         Bed{" "}
-                        {selectedBed.bedNumber}
+                        {
+                          selectedBed.bedNumber
+                        }
                       </h5>
 
                       <p className="mb-0 text-muted">
-                        {selectedBedMessage}
+                        {
+                          selectedBedMessage
+                        }
                       </p>
                     </div>
 
@@ -1275,7 +1369,9 @@ const RoomDetails = () => {
                       <button
                         type="button"
                         className="btn btn-outline-secondary rounded-pill px-4 py-2 fw-semibold"
-                        disabled={submitting}
+                        disabled={
+                          submitting
+                        }
                         onClick={() => {
                           setSelectedBedId(
                             null
@@ -1314,7 +1410,8 @@ const RoomDetails = () => {
                   style={{
                     background:
                       "#F1EAF5",
-                    color: "#6D597A",
+                    color:
+                      "#6D597A",
                   }}
                 >
                   {totalBeds} Beds
@@ -1337,7 +1434,8 @@ const RoomDetails = () => {
                         style={{
                           color:
                             "#5A4D60",
-                          fontSize: "12px",
+                          fontSize:
+                            "12px",
                           textTransform:
                             "uppercase",
                           letterSpacing:
@@ -1352,7 +1450,8 @@ const RoomDetails = () => {
                         style={{
                           color:
                             "#5A4D60",
-                          fontSize: "12px",
+                          fontSize:
+                            "12px",
                           textTransform:
                             "uppercase",
                           letterSpacing:
@@ -1367,7 +1466,8 @@ const RoomDetails = () => {
                         style={{
                           color:
                             "#5A4D60",
-                          fontSize: "12px",
+                          fontSize:
+                            "12px",
                           textTransform:
                             "uppercase",
                           letterSpacing:
@@ -1381,7 +1481,10 @@ const RoomDetails = () => {
 
                   <tbody>
                     {activeBeds.map(
-                      (bed, index) => {
+                      (
+                        bed,
+                        index
+                      ) => {
                         const isSelected =
                           selectedBedId ===
                           bedSelectionKey(
@@ -1455,7 +1558,9 @@ const RoomDetails = () => {
                                 }}
                               >
                                 Bed{" "}
-                                {bed.bedNumber}
+                                {
+                                  bed.bedNumber
+                                }
                               </div>
 
                               {isSelected && (
@@ -1541,7 +1646,8 @@ const RoomDetails = () => {
                   borderRadius: "10px",
                   background:
                     "linear-gradient(90deg, #6D597A, #B56576)",
-                  marginBottom: "18px",
+                  marginBottom:
+                    "18px",
                 }}
               />
 
@@ -1560,14 +1666,16 @@ const RoomDetails = () => {
                 style={{
                   color:
                     "#6E6372",
-                  lineHeight: 1.7,
+                  lineHeight:
+                    1.7,
                 }}
               >
-                If a bed is occupied or on
-                hold, you can select it and
-                join its waitlist. When the
-                bed becomes available, the
-                first student in the waitlist
+                If a bed is occupied or
+                on hold, you can select
+                it and join its waitlist.
+                When the bed becomes
+                available, the first
+                student in the waitlist
                 will be notified first.
               </p>
             </div>

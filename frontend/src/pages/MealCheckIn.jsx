@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import {
   getMealMenus,
@@ -50,15 +56,6 @@ const mealTypeLabels = {
   breakfast: "Breakfast",
   lunch: "Lunch",
   dinner: "Dinner",
-};
-
-/*
- * Meal icons removed.
- */
-const mealTypeIcons = {
-  breakfast: "",
-  lunch: "",
-  dinner: "",
 };
 
 const statusChoices = [
@@ -142,8 +139,10 @@ const ManualCheckInPanel = ({
   onSelectResident,
 }) => {
   const [searchText, setSearchText] = useState("");
-  const [selectedMatch, setSelectedMatch] = useState(null);
-  const [status, setStatus] = useState("collected");
+  const [selectedMatch, setSelectedMatch] =
+    useState(null);
+  const [status, setStatus] =
+    useState("collected");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -166,11 +165,13 @@ const ManualCheckInPanel = ({
       return [];
     }
 
-    const query = searchText.trim().toLowerCase();
+    const query =
+      searchText.trim().toLowerCase();
 
     return pendingResidents.filter((item) => {
       const name =
-        item.resident?.name?.toLowerCase() || "";
+        item.resident?.name?.toLowerCase() ||
+        "";
 
       const building = String(
         item.resident?.building || ""
@@ -195,7 +196,9 @@ const ManualCheckInPanel = ({
 
   const handleSelectMatch = (item) => {
     setSelectedMatch(item);
-    setSearchText(item.resident?.name || "");
+    setSearchText(
+      item.resident?.name || ""
+    );
 
     if (onSelectResident) {
       onSelectResident(item.resident);
@@ -204,14 +207,18 @@ const ManualCheckInPanel = ({
 
   const handleConfirm = async () => {
     if (!selectedMatch) {
-      setError("Search and select a resident first");
+      setError(
+        "Search and select a resident first"
+      );
       return;
     }
 
-    const stillPending = pendingResidents.some(
-      (item) =>
-        item.mealToken === selectedMatch.mealToken
-    );
+    const stillPending =
+      pendingResidents.some(
+        (item) =>
+          item.mealToken ===
+          selectedMatch.mealToken
+      );
 
     if (!stillPending) {
       setError(
@@ -364,7 +371,9 @@ const ManualCheckInPanel = ({
                       key={item.mealToken}
                       className="list-group-item list-group-item-action small"
                       onClick={() =>
-                        handleSelectMatch(item)
+                        handleSelectMatch(
+                          item
+                        )
                       }
                     >
                       <strong>
@@ -405,21 +414,25 @@ const ManualCheckInPanel = ({
               value={selectedMealType}
               disabled={busy}
               onChange={(e) =>
-                onMealTypeChange(e.target.value)
+                onMealTypeChange(
+                  e.target.value
+                )
               }
               style={{
                 borderRadius: "9px",
                 border: "1px solid #c4b5fd",
               }}
             >
-              {mealTypeOptions.map((option) => (
-                <option
-                  key={option.value}
-                  value={option.value}
-                >
-                  {option.label}
-                </option>
-              ))}
+              {mealTypeOptions.map(
+                (option) => (
+                  <option
+                    key={option.value}
+                    value={option.value}
+                  >
+                    {option.label}
+                  </option>
+                )
+              )}
             </select>
           </div>
 
@@ -433,21 +446,25 @@ const ManualCheckInPanel = ({
               value={status}
               disabled={busy}
               onChange={(e) =>
-                setStatus(e.target.value)
+                setStatus(
+                  e.target.value
+                )
               }
               style={{
                 borderRadius: "9px",
                 border: "1px solid #c4b5fd",
               }}
             >
-              {statusChoices.map((choice) => (
-                <option
-                  key={choice.value}
-                  value={choice.value}
-                >
-                  {choice.label}
-                </option>
-              ))}
+              {statusChoices.map(
+                (choice) => (
+                  <option
+                    key={choice.value}
+                    value={choice.value}
+                  >
+                    {choice.label}
+                  </option>
+                )
+              )}
             </select>
           </div>
         </div>
@@ -493,7 +510,8 @@ const MealCountsSummary = ({
 
     records.forEach((record) => {
       if (
-        base[record.status] !== undefined
+        base[record.status] !==
+        undefined
       ) {
         base[record.status] += 1;
       }
@@ -501,9 +519,11 @@ const MealCountsSummary = ({
 
     return {
       ...base,
-      not_checked_in: pending.length,
+      not_checked_in:
+        pending.length,
       total:
-        records.length + pending.length,
+        records.length +
+        pending.length,
     };
   }, [records, pending]);
 
@@ -547,7 +567,9 @@ const MealCountsSummary = ({
             <div className="card-body text-center py-2">
               <div
                 className={`badge ${
-                  statusBadgeClass[item.key]
+                  statusBadgeClass[
+                    item.key
+                  ]
                 } mb-1`}
                 style={{
                   fontSize: "0.65rem",
@@ -567,8 +589,10 @@ const MealCountsSummary = ({
       <div className="col-12">
         <div className="text-muted small text-end">
           📊 {counts.total} meal
-          {counts.total === 1 ? "" : "s"} for
-          this slot
+          {counts.total === 1
+            ? ""
+            : "s"}{" "}
+          for this slot
         </div>
       </div>
     </div>
@@ -621,7 +645,8 @@ const TodayStatusCards = ({
   if (cards.length === 0) {
     return (
       <div className="alert alert-info py-2">
-        ℹ️ No confirmed meals for this slot yet.
+        ℹ️ No confirmed meals for this
+        slot yet.
       </div>
     );
   }
@@ -691,9 +716,11 @@ const TodayStatusCards = ({
               style={{
                 cursor: "pointer",
                 border:
-                  card.status === "collected"
+                  card.status ===
+                  "collected"
                     ? "2px solid #86efac"
-                    : card.status === "late"
+                    : card.status ===
+                      "late"
                     ? "2px solid #facc15"
                     : card.status ===
                       "skipped"
@@ -701,9 +728,11 @@ const TodayStatusCards = ({
                     : "2px solid #cbd5e1",
                 borderRadius: "12px",
                 background:
-                  card.status === "collected"
+                  card.status ===
+                  "collected"
                     ? "#f0fdf4"
-                    : card.status === "late"
+                    : card.status ===
+                      "late"
                     ? "#fefce8"
                     : card.status ===
                       "skipped"
@@ -712,7 +741,9 @@ const TodayStatusCards = ({
               }}
               onClick={() =>
                 onSelectCard &&
-                onSelectCard(card.resident)
+                onSelectCard(
+                  card.resident
+                )
               }
               onKeyDown={(e) => {
                 if (
@@ -738,7 +769,8 @@ const TodayStatusCards = ({
                     className={`badge ${
                       statusBadgeClass[
                         card.status
-                      ] || "bg-secondary"
+                      ] ||
+                      "bg-secondary"
                     }`}
                     style={{
                       fontSize: "0.65rem",
@@ -929,8 +961,10 @@ const MealCheckIn = () => {
   const [gridLoading, setGridLoading] =
     useState(false);
 
-  const [selectedResident, setSelectedResident] =
-    useState(null);
+  const [
+    selectedResident,
+    setSelectedResident,
+  ] = useState(null);
 
   const [loading, setLoading] =
     useState(true);
@@ -938,14 +972,18 @@ const MealCheckIn = () => {
   const [error, setError] =
     useState("");
 
-  const [sweepMessage, setSweepMessage] =
-    useState("");
+  const [
+    sweepMessage,
+    setSweepMessage,
+  ] = useState("");
 
   const loadInitialDataRef =
     useRef(() => {});
 
-  const [refreshSignal, setRefreshSignal] =
-    useState(0);
+  const [
+    refreshSignal,
+    setRefreshSignal,
+  ] = useState(0);
 
   const isMountedRef =
     useRef(true);
@@ -1343,7 +1381,7 @@ const MealCheckIn = () => {
         <>
           <div className="d-flex justify-content-between align-items-center mb-3">
             <h5 className="mb-0 fw-bold">
-               Your Confirmed Meals
+              Your Confirmed Meals
             </h5>
 
             <button

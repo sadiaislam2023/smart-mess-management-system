@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useState,
 } from "react";
@@ -297,8 +298,15 @@ function AdminComplaintReview() {
     setDecisionNote,
   ] = useState("");
 
+  /*
+   * The setter is intentionally retained because the
+   * "Set Note" action uses it to track whether a note
+   * has been explicitly set.
+   *
+   * The state value itself is not required by the UI.
+   */
   const [
-    noteSet,
+    ,
     setNoteSet,
   ] = useState(false);
 
@@ -358,52 +366,55 @@ function AdminComplaintReview() {
   ========================================================= */
 
   const loadComplaint =
-    async () => {
+    useCallback(
+      async () => {
 
-      try {
+        try {
 
-        setLoading(true);
-        setError("");
+          setLoading(true);
+          setError("");
 
-        const data =
-          await getComplaintByIdForAdmin(
-            id
+          const data =
+            await getComplaintByIdForAdmin(
+              id
+            );
+
+          const loadedComplaint =
+            data.complaint;
+
+          setComplaint(
+            loadedComplaint
           );
 
-        const loadedComplaint =
-          data.complaint;
+          setConcernsManager(
+            Boolean(
+              loadedComplaint.concernsManager
+            )
+          );
 
-        setComplaint(
-          loadedComplaint
-        );
+        } catch (err) {
 
-        setConcernsManager(
-          Boolean(
-            loadedComplaint.concernsManager
-          )
-        );
+          setError(
+            err.response?.data
+              ?.message ||
+            "Failed to load complaint."
+          );
 
-      } catch (err) {
+        } finally {
 
-        setError(
-          err.response?.data
-            ?.message ||
-          "Failed to load complaint."
-        );
+          setLoading(false);
 
-      } finally {
-
-        setLoading(false);
-
-      }
-    };
+        }
+      },
+      [id]
+    );
 
 
   useEffect(() => {
 
     loadComplaint();
 
-  }, [id]);
+  }, [loadComplaint]);
 
 
   /* =========================================================
@@ -417,7 +428,7 @@ function AdminComplaintReview() {
 
   /* =========================================================
      MARK REVIEW STARTED LOCALLY
-========================================================= */
+  ========================================================= */
 
   const markReviewStarted =
     (updatedComplaint = null) => {
@@ -508,7 +519,7 @@ function AdminComplaintReview() {
 
      reviewDecision = decision
      status = decision
-========================================================= */
+  ========================================================= */
 
   const handleDecision =
     async (
@@ -605,7 +616,7 @@ function AdminComplaintReview() {
      The admin sets the note first (Set Note button), then
      clicks Approve/Reject directly — the resident sees
      whatever note was set before the click.
-========================================================= */
+  ========================================================= */
 
   const handleReopenReview =
     async (
@@ -649,7 +660,7 @@ function AdminComplaintReview() {
      Review Decision -> Under Review
 
      Status stays unchanged.
-========================================================= */
+  ========================================================= */
 
   const handleInspection =
     async () => {
@@ -695,7 +706,7 @@ function AdminComplaintReview() {
      Review Decision -> Under Review
 
      Status unchanged.
-========================================================= */
+  ========================================================= */
 
   const handleQuestion =
     async (
@@ -762,7 +773,7 @@ function AdminComplaintReview() {
 
      Manager concern complaints MUST be Valid
      before authority assignment is allowed.
-========================================================= */
+  ========================================================= */
 
   const handleAssignAlternativeHandler =
     async (
@@ -855,7 +866,7 @@ function AdminComplaintReview() {
 
   /* =========================================================
      WORK ORDER STATUS
-========================================================= */
+  ========================================================= */
 
   const handleAlternativeStatus =
     async (
@@ -936,7 +947,7 @@ function AdminComplaintReview() {
 
   /* =========================================================
      COMPLETION EVIDENCE
-========================================================= */
+  ========================================================= */
 
   const handleAlternativeEvidence =
     async (
@@ -1008,7 +1019,7 @@ function AdminComplaintReview() {
 
   /* =========================================================
      DECISION BUTTON COLORS
-========================================================= */
+  ========================================================= */
 
   const getDecisionButtonClass =
     (
@@ -1039,7 +1050,7 @@ function AdminComplaintReview() {
 
   /* =========================================================
      STATUS BADGE COLORS
-========================================================= */
+  ========================================================= */
 
   const getStatusBadgeClass =
     (
@@ -1095,7 +1106,7 @@ function AdminComplaintReview() {
 
   /* =========================================================
      REVIEW BADGE COLORS
-========================================================= */
+  ========================================================= */
 
   const getReviewBadgeClass =
     (
@@ -1132,7 +1143,7 @@ function AdminComplaintReview() {
 
   /* =========================================================
      LOADING
-========================================================= */
+  ========================================================= */
 
   if (loading) {
 
@@ -1146,7 +1157,7 @@ function AdminComplaintReview() {
 
   /* =========================================================
      NOT FOUND
-========================================================= */
+  ========================================================= */
 
   if (!complaint) {
 
@@ -1161,7 +1172,7 @@ function AdminComplaintReview() {
 
   /* =========================================================
      STATUS LOGIC
-========================================================= */
+  ========================================================= */
 
   const activeWorkOrder =
     isActiveWorkOrderStatus(
@@ -1195,7 +1206,7 @@ function AdminComplaintReview() {
 
   /* =========================================================
      FINAL DECISION LOCK
-========================================================= */
+  ========================================================= */
 
   const reopenReviewPending =
     Boolean(
@@ -1216,6 +1227,7 @@ function AdminComplaintReview() {
    * alternative for manager-concern complaints, etc.)
    * continue to work exactly as before.
    */
+
   const reopenApproved =
     complaint.status ===
       "Reopened" &&
@@ -1234,6 +1246,7 @@ function AdminComplaintReview() {
    * The other final decision buttons stay governed by the
    * regular `finalDecisionLocked` rule.
    */
+
   const isFinalDecisionButtonLocked = (
     decision
   ) =>
@@ -1246,6 +1259,7 @@ function AdminComplaintReview() {
    * behaves the same as before and stays usable after an
    * approved reopening.
    */
+
   const noteLocked =
     activeWorkOrder ||
     isClosed ||
@@ -1258,7 +1272,7 @@ function AdminComplaintReview() {
      IMPORTANT:
 
      Only Valid allows assignment.
-========================================================= */
+  ========================================================= */
 
   const canAssignAlternative =
     concernsManager &&
@@ -1269,7 +1283,7 @@ function AdminComplaintReview() {
 
   /* =========================================================
      SITE INSPECTION
-========================================================= */
+  ========================================================= */
 
   const canRequestInspection =
     !isClosed;
@@ -1277,7 +1291,7 @@ function AdminComplaintReview() {
 
   /* =========================================================
      WORK ORDER BUTTONS
-========================================================= */
+  ========================================================= */
 
   const canMarkInProgress =
     !isClosed &&
@@ -1508,16 +1522,6 @@ function AdminComplaintReview() {
 
             {/* =========================================
                 FINAL DECISION NOTE
-
-                IMPORTANT:
-
-                This appears for BOTH:
-                - Normal complaint
-                - Manager concern complaint
-
-                It appears ONLY here.
-                It does NOT appear in the
-                right-side decision box.
             ========================================= */}
 
             {finalDecisionNote && (
@@ -2166,9 +2170,6 @@ function AdminComplaintReview() {
 
         {/* ===============================================
             AUTHORIZED ALTERNATIVE
-
-            ONLY APPEARS AFTER VALID
-            FOR MANAGER-CONCERN COMPLAINTS
         =============================================== */}
 
         {concernsManager && (
@@ -2197,11 +2198,6 @@ function AdminComplaintReview() {
               ) : finalDecision !==
                 "Valid" ? (
 
-                /*
-                 * BEFORE VALID:
-                 * Do not show assignment form.
-                 */
-
                 <div className="alert alert-warning mb-0">
 
                   <strong>
@@ -2220,18 +2216,6 @@ function AdminComplaintReview() {
               ) : complaint.alternativeHandler
                 ?.name &&
                 !reopenApproved ? (
-
-                /*
-                 * ALREADY ASSIGNED
-                 *
-                 * NOTE: if the resident reopened this
-                 * complaint and the System Administrator
-                 * approved the reopening, we fall through
-                 * to the assignment form below instead —
-                 * the same process as the original "click
-                 * Valid" flow runs again so the admin can
-                 * (re)assign the authorized alternative.
-                 */
 
                 <div className="alert alert-info mb-0">
 
@@ -2292,10 +2276,6 @@ function AdminComplaintReview() {
                 </div>
 
               ) : (
-
-                /*
-                 * ONLY AFTER VALID
-                 */
 
                 <form
                   onSubmit={

@@ -1,5 +1,14 @@
-import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import {
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
+
+import {
+  useNavigate,
+  useParams,
+} from "react-router-dom";
+
 import roomService from "../services/roomService";
 
 const RoomEdit = () => {
@@ -9,10 +18,12 @@ const RoomEdit = () => {
   const [room, setRoom] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [updatingBedId, setUpdatingBedId] = useState(null);
+  const [updatingBedId, setUpdatingBedId] =
+    useState(null);
 
   const [images, setImages] = useState([]);
-  const [errorMessage, setErrorMessage] = useState("");
+  const [errorMessage, setErrorMessage] =
+    useState("");
 
   const [newBed, setNewBed] = useState({
     bedNumber: "",
@@ -24,35 +35,45 @@ const RoomEdit = () => {
   // LOAD ROOM
   // =========================================================
 
+  const loadRoom = useCallback(
+    async () => {
+      try {
+        setLoading(true);
+
+        const res =
+          await roomService.getRoom(id);
+
+        setRoom(res.data.room);
+      } catch (err) {
+        console.error(
+          "Failed to load room:",
+          err
+        );
+
+        alert(
+          err.response?.data?.message ||
+            "Failed to load room."
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [id]
+  );
+
   useEffect(() => {
     loadRoom();
-  }, [id]);
-
-  const loadRoom = async () => {
-    try {
-      setLoading(true);
-
-      const res = await roomService.getRoom(id);
-
-      setRoom(res.data.room);
-    } catch (err) {
-      console.error("Failed to load room:", err);
-
-      alert(
-        err.response?.data?.message ||
-          "Failed to load room."
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [loadRoom]);
 
   // =========================================================
   // BASIC INPUT
   // =========================================================
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const {
+      name,
+      value,
+    } = e.target;
 
     setRoom((prev) => ({
       ...prev,
@@ -88,10 +109,14 @@ const RoomEdit = () => {
         return [];
       }
 
-      const formData = new FormData();
+      const formData =
+        new FormData();
 
       images.forEach((img) => {
-        formData.append("images", img);
+        formData.append(
+          "images",
+          img
+        );
       });
 
       const res =
@@ -119,7 +144,9 @@ const RoomEdit = () => {
   // REMOVE IMAGE
   // =========================================================
 
-  const removeImage = async (image) => {
+  const removeImage = async (
+    image
+  ) => {
     if (!image?.public_id) {
       return;
     }
@@ -132,7 +159,9 @@ const RoomEdit = () => {
 
       setRoom((prev) => ({
         ...prev,
-        images: (prev.images || []).filter(
+        images: (
+          prev.images || []
+        ).filter(
           (img) =>
             img.public_id !==
             image.public_id
@@ -156,13 +185,21 @@ const RoomEdit = () => {
   // =========================================================
 
   const addBed = async () => {
-    if (!newBed.bedNumber.trim()) {
-      alert("Please enter a bed number.");
+    if (
+      !newBed.bedNumber.trim()
+    ) {
+      alert(
+        "Please enter a bed number."
+      );
       return;
     }
 
-    if (!newBed.position.trim()) {
-      alert("Please enter the bed position.");
+    if (
+      !newBed.position.trim()
+    ) {
+      alert(
+        "Please enter the bed position."
+      );
       return;
     }
 
@@ -184,12 +221,16 @@ const RoomEdit = () => {
        * Otherwise reload from backend.
        */
       if (res?.data?.room) {
-        setRoom(res.data.room);
+        setRoom(
+          res.data.room
+        );
       } else {
         await loadRoom();
       }
 
-      alert("Bed added successfully.");
+      alert(
+        "Bed added successfully."
+      );
     } catch (err) {
       console.error(
         "Failed to add bed:",
@@ -213,118 +254,136 @@ const RoomEdit = () => {
   // Occupied  -> Available
   // =========================================================
 
-  const updateBedStatus = async (bed) => {
-    if (!bed?._id) {
-      return;
-    }
-
-    /*
-     * Do not manually change a bed that is currently
-     * on hold by a pending reservation.
-     *
-     * The reservation system controls onHold beds.
-     */
-    if (bed.onHold) {
-      alert(
-        "This bed is currently on hold for a reservation and cannot be changed manually."
-      );
-
-      return;
-    }
-
-    const newOccupiedStatus =
-      !Boolean(bed.occupied);
-
-    const actionText =
-      newOccupiedStatus
-        ? "mark this bed as occupied"
-        : "make this bed available";
-
-    const confirmed =
-      window.confirm(
-        `Are you sure you want to ${actionText}?`
-      );
-
-    if (!confirmed) {
-      return;
-    }
-
-    try {
-      setUpdatingBedId(bed._id);
-
-      /*
-       * Send the changed status directly
-       * to the backend.
-       */
-      const res =
-        await roomService.updateBed(
-          id,
-          bed._id,
-          {
-            occupied:
-              newOccupiedStatus,
-          }
-        );
-
-      /*
-       * Update UI using backend response
-       * if available.
-       */
-      if (res?.data?.room) {
-        setRoom(res.data.room);
-      } else if (res?.data?.bed) {
-        setRoom((prev) => ({
-          ...prev,
-          beds: (prev.beds || []).map(
-            (currentBed) =>
-              currentBed._id ===
-              bed._id
-                ? {
-                    ...currentBed,
-                    ...res.data.bed,
-                  }
-                : currentBed
-          ),
-        }));
-      } else {
-        /*
-         * Safest fallback:
-         * reload from MongoDB.
-         */
-        await loadRoom();
+  const updateBedStatus =
+    async (bed) => {
+      if (!bed?._id) {
+        return;
       }
 
-      alert(
-        newOccupiedStatus
-          ? "Bed marked as occupied."
-          : "Bed marked as available."
-      );
-    } catch (err) {
-      console.error(
-        "Failed to update bed status:",
-        err
-      );
-
-      alert(
-        err.response?.data?.message ||
-          "Failed to update bed status."
-      );
-
       /*
-       * Reload so frontend always matches
-       * the actual backend state.
+       * Do not manually change a bed that is currently
+       * on hold by a pending reservation.
+       *
+       * The reservation system controls onHold beds.
        */
-      await loadRoom();
-    } finally {
-      setUpdatingBedId(null);
-    }
-  };
+      if (bed.onHold) {
+        alert(
+          "This bed is currently on hold for a reservation and cannot be changed manually."
+        );
+
+        return;
+      }
+
+      const newOccupiedStatus =
+        !Boolean(bed.occupied);
+
+      const actionText =
+        newOccupiedStatus
+          ? "mark this bed as occupied"
+          : "make this bed available";
+
+      const confirmed =
+        window.confirm(
+          `Are you sure you want to ${actionText}?`
+        );
+
+      if (!confirmed) {
+        return;
+      }
+
+      try {
+        setUpdatingBedId(
+          bed._id
+        );
+
+        /*
+         * Send the changed status directly
+         * to the backend.
+         */
+        const res =
+          await roomService.updateBed(
+            id,
+            bed._id,
+            {
+              occupied:
+                newOccupiedStatus,
+            }
+          );
+
+        /*
+         * Update UI using backend response
+         * if available.
+         */
+        if (res?.data?.room) {
+          setRoom(
+            res.data.room
+          );
+        } else if (
+          res?.data?.bed
+        ) {
+          setRoom((prev) => ({
+            ...prev,
+            beds: (
+              prev.beds || []
+            ).map(
+              (
+                currentBed
+              ) =>
+                currentBed._id ===
+                bed._id
+                  ? {
+                      ...currentBed,
+                      ...res
+                        .data
+                        .bed,
+                    }
+                  : currentBed
+            ),
+          }));
+        } else {
+          /*
+           * Safest fallback:
+           * reload from MongoDB.
+           */
+          await loadRoom();
+        }
+
+        alert(
+          newOccupiedStatus
+            ? "Bed marked as occupied."
+            : "Bed marked as available."
+        );
+      } catch (err) {
+        console.error(
+          "Failed to update bed status:",
+          err
+        );
+
+        alert(
+          err.response?.data
+            ?.message ||
+            "Failed to update bed status."
+        );
+
+        /*
+         * Reload so frontend always matches
+         * the actual backend state.
+         */
+        await loadRoom();
+      } finally {
+        setUpdatingBedId(
+          null
+        );
+      }
+    };
 
   // =========================================================
   // DELETE BED / ARCHIVE BED
   // =========================================================
 
-  const deleteBed = async (bed) => {
+  const deleteBed = async (
+    bed
+  ) => {
     if (!bed?._id) {
       return;
     }
@@ -371,14 +430,18 @@ const RoomEdit = () => {
        */
       setRoom((prev) => ({
         ...prev,
-        beds: (prev.beds || []).filter(
+        beds: (
+          prev.beds || []
+        ).filter(
           (currentBed) =>
             currentBed._id !==
             bed._id
         ),
       }));
 
-      alert("Bed deleted successfully.");
+      alert(
+        "Bed deleted successfully."
+      );
     } catch (err) {
       console.error(
         "Failed to delete bed:",
@@ -398,49 +461,53 @@ const RoomEdit = () => {
   // SAVE ROOM
   // =========================================================
 
-  const handleSave = async () => {
-    try {
-      setSaving(true);
+  const handleSave =
+    async () => {
+      try {
+        setSaving(true);
 
-      let uploaded = [];
+        let uploaded = [];
 
-      if (images.length > 0) {
-        uploaded =
-          await uploadPhotos();
+        if (images.length > 0) {
+          uploaded =
+            await uploadPhotos();
+        }
+
+        const updatedRoom = {
+          ...room,
+          images: [
+            ...(room.images || []),
+            ...uploaded,
+          ],
+        };
+
+        await roomService.updateRoom(
+          id,
+          updatedRoom
+        );
+
+        alert(
+          "Room updated successfully."
+        );
+
+        navigate(
+          `/rooms/${id}`
+        );
+      } catch (err) {
+        console.error(
+          "Room update failed:",
+          err
+        );
+
+        alert(
+          err.response?.data
+            ?.message ||
+            "Room update failed."
+        );
+      } finally {
+        setSaving(false);
       }
-
-      const updatedRoom = {
-        ...room,
-        images: [
-          ...(room.images || []),
-          ...uploaded,
-        ],
-      };
-
-      await roomService.updateRoom(
-        id,
-        updatedRoom
-      );
-
-      alert(
-        "Room updated successfully."
-      );
-
-      navigate(`/rooms/${id}`);
-    } catch (err) {
-      console.error(
-        "Room update failed:",
-        err
-      );
-
-      alert(
-        err.response?.data?.message ||
-          "Room update failed."
-      );
-    } finally {
-      setSaving(false);
-    }
-  };
+    };
 
   // =========================================================
   // LOADING
@@ -517,7 +584,8 @@ const RoomEdit = () => {
           <input
             className="form-control"
             value={
-              room.building?.name || ""
+              room.building?.name ||
+              ""
             }
             onChange={(e) =>
               updateNested(
@@ -540,13 +608,16 @@ const RoomEdit = () => {
             type="number"
             className="form-control"
             value={
-              room.floor?.number ?? ""
+              room.floor?.number ??
+              ""
             }
             onChange={(e) =>
               updateNested(
                 "floor",
                 "number",
-                Number(e.target.value)
+                Number(
+                  e.target.value
+                )
               )
             }
           />
@@ -563,9 +634,12 @@ const RoomEdit = () => {
             className="form-control"
             name="roomNumber"
             value={
-              room.roomNumber || ""
+              room.roomNumber ||
+              ""
             }
-            onChange={handleChange}
+            onChange={
+              handleChange
+            }
           />
         </div>
 
@@ -580,9 +654,12 @@ const RoomEdit = () => {
             className="form-control"
             name="messLocation"
             value={
-              room.messLocation || ""
+              room.messLocation ||
+              ""
             }
-            onChange={handleChange}
+            onChange={
+              handleChange
+            }
           />
         </div>
 
@@ -598,9 +675,12 @@ const RoomEdit = () => {
             className="form-control"
             name="totalArea"
             value={
-              room.totalArea ?? ""
+              room.totalArea ??
+              ""
             }
-            onChange={handleChange}
+            onChange={
+              handleChange
+            }
           />
         </div>
 
@@ -616,9 +696,12 @@ const RoomEdit = () => {
             className="form-control"
             name="usableArea"
             value={
-              room.usableArea ?? ""
+              room.usableArea ??
+              ""
             }
-            onChange={handleChange}
+            onChange={
+              handleChange
+            }
           />
         </div>
 
@@ -633,13 +716,17 @@ const RoomEdit = () => {
             type="number"
             className="form-control"
             value={
-              room.layout?.roomWidth ?? ""
+              room.layout
+                ?.roomWidth ??
+              ""
             }
             onChange={(e) =>
               updateNested(
                 "layout",
                 "roomWidth",
-                Number(e.target.value)
+                Number(
+                  e.target.value
+                )
               )
             }
           />
@@ -656,13 +743,17 @@ const RoomEdit = () => {
             type="number"
             className="form-control"
             value={
-              room.layout?.roomLength ?? ""
+              room.layout
+                ?.roomLength ??
+              ""
             }
             onChange={(e) =>
               updateNested(
                 "layout",
                 "roomLength",
-                Number(e.target.value)
+                Number(
+                  e.target.value
+                )
               )
             }
           />
@@ -682,7 +773,9 @@ const RoomEdit = () => {
             value={
               room.rent ?? ""
             }
-            onChange={handleChange}
+            onChange={
+              handleChange
+            }
           />
         </div>
 
@@ -699,7 +792,9 @@ const RoomEdit = () => {
             value={
               room.storage || ""
             }
-            onChange={handleChange}
+            onChange={
+              handleChange
+            }
           />
         </div>
 
@@ -717,7 +812,9 @@ const RoomEdit = () => {
               room.bathroomType ||
               "Shared"
             }
-            onChange={handleChange}
+            onChange={
+              handleChange
+            }
           >
             <option value="Shared">
               Shared
@@ -743,7 +840,9 @@ const RoomEdit = () => {
               room.naturalLightLevel ||
               "Medium"
             }
-            onChange={handleChange}
+            onChange={
+              handleChange
+            }
           >
             <option value="Low">
               Low
@@ -770,9 +869,12 @@ const RoomEdit = () => {
             className="form-control"
             name="utilityPolicy"
             value={
-              room.utilityPolicy || ""
+              room.utilityPolicy ||
+              ""
             }
-            onChange={handleChange}
+            onChange={
+              handleChange
+            }
           />
         </div>
 
@@ -787,9 +889,12 @@ const RoomEdit = () => {
             className="form-control"
             name="ventilationNotes"
             value={
-              room.ventilationNotes || ""
+              room.ventilationNotes ||
+              ""
             }
-            onChange={handleChange}
+            onChange={
+              handleChange
+            }
           />
         </div>
 
@@ -811,8 +916,9 @@ const RoomEdit = () => {
                 amenities:
                   e.target.value
                     .split(",")
-                    .map((item) =>
-                      item.trim()
+                    .map(
+                      (item) =>
+                        item.trim()
                     )
                     .filter(
                       (item) =>
@@ -870,7 +976,10 @@ const RoomEdit = () => {
       {images.length > 0 && (
         <div className="row mb-4">
           {images.map(
-            (img, index) => (
+            (
+              img,
+              index
+            ) => (
               <div
                 className="col-md-3 col-sm-4 mb-3"
                 key={index}
@@ -884,7 +993,8 @@ const RoomEdit = () => {
                   style={{
                     height: "160px",
                     width: "100%",
-                    objectFit: "cover",
+                    objectFit:
+                      "cover",
                   }}
                 />
               </div>
@@ -897,7 +1007,10 @@ const RoomEdit = () => {
 
       <div className="row">
         {(room.images || []).map(
-          (img, index) => (
+          (
+            img,
+            index
+          ) => (
             <div
               className="col-md-3 mb-3"
               key={
@@ -912,8 +1025,10 @@ const RoomEdit = () => {
                   alt="Room"
                   className="card-img-top"
                   style={{
-                    height: "180px",
-                    objectFit: "cover",
+                    height:
+                      "180px",
+                    objectFit:
+                      "cover",
                   }}
                 />
 
@@ -922,7 +1037,9 @@ const RoomEdit = () => {
                   <button
                     className="btn btn-danger btn-sm w-100"
                     onClick={() =>
-                      removeImage(img)
+                      removeImage(
+                        img
+                      )
                     }
                   >
                     Remove
@@ -986,7 +1103,9 @@ const RoomEdit = () => {
         <div className="col-md-4">
           <button
             className="btn btn-primary w-100"
-            onClick={addBed}
+            onClick={
+              addBed
+            }
           >
             Add Bed
           </button>
@@ -996,9 +1115,12 @@ const RoomEdit = () => {
 
       {/* BED TABLE */}
 
-      {(room.beds || []).filter(
-        (bed) => !bed.isArchived
-      ).length === 0 ? (
+      {(room.beds || [])
+        .filter(
+          (bed) =>
+            !bed.isArchived
+        )
+        .length === 0 ? (
 
         <div className="alert alert-info">
           No beds added to this room.
@@ -1039,106 +1161,114 @@ const RoomEdit = () => {
                   (bed) =>
                     !bed.isArchived
                 )
-                .map((bed) => {
+                .map(
+                  (bed) => {
 
-                  const updating =
-                    updatingBedId ===
-                    bed._id;
+                    const updating =
+                      updatingBedId ===
+                      bed._id;
 
-                  return (
-                    <tr
-                      key={bed._id}
-                    >
+                    return (
+                      <tr
+                        key={
+                          bed._id
+                        }
+                      >
 
-                      {/* BED NUMBER */}
+                        {/* BED NUMBER */}
 
-                      <td>
-                        {bed.bedNumber}
-                      </td>
+                        <td>
+                          {
+                            bed.bedNumber
+                          }
+                        </td>
 
-                      {/* POSITION */}
+                        {/* POSITION */}
 
-                      <td>
-                        {bed.position ||
-                          "-"}
-                      </td>
+                        <td>
+                          {
+                            bed.position ||
+                            "-"
+                          }
+                        </td>
 
-                      {/* STATUS */}
+                        {/* STATUS */}
 
-                      <td>
+                        <td>
 
-                        {bed.onHold ? (
+                          {bed.onHold ? (
 
-                          <span className="badge bg-warning text-dark">
-                            On Hold
-                          </span>
+                            <span className="badge bg-warning text-dark">
+                              On Hold
+                            </span>
 
-                        ) : bed.occupied ? (
+                          ) : bed.occupied ? (
+
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-danger"
+                              disabled={
+                                updating
+                              }
+                              onClick={() =>
+                                updateBedStatus(
+                                  bed
+                                )
+                              }
+                            >
+                              {updating
+                                ? "Updating..."
+                                : "Occupied"}
+                            </button>
+
+                          ) : (
+
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-success"
+                              disabled={
+                                updating
+                              }
+                              onClick={() =>
+                                updateBedStatus(
+                                  bed
+                                )
+                              }
+                            >
+                              {updating
+                                ? "Updating..."
+                                : "Available"}
+                            </button>
+
+                          )}
+
+                        </td>
+
+                        {/* DELETE */}
+
+                        <td>
 
                           <button
-                            type="button"
-                            className="btn btn-sm btn-danger"
+                            className="btn btn-danger btn-sm"
                             disabled={
-                              updating
+                              bed.occupied ||
+                              bed.onHold
                             }
                             onClick={() =>
-                              updateBedStatus(
+                              deleteBed(
                                 bed
                               )
                             }
                           >
-                            {updating
-                              ? "Updating..."
-                              : "Occupied"}
+                            Delete
                           </button>
 
-                        ) : (
+                        </td>
 
-                          <button
-                            type="button"
-                            className="btn btn-sm btn-success"
-                            disabled={
-                              updating
-                            }
-                            onClick={() =>
-                              updateBedStatus(
-                                bed
-                              )
-                            }
-                          >
-                            {updating
-                              ? "Updating..."
-                              : "Available"}
-                          </button>
-
-                        )}
-
-                      </td>
-
-                      {/* DELETE */}
-
-                      <td>
-
-                        <button
-                          className="btn btn-danger btn-sm"
-                          disabled={
-                            bed.occupied ||
-                            bed.onHold
-                          }
-                          onClick={() =>
-                            deleteBed(
-                              bed
-                            )
-                          }
-                        >
-                          Delete
-                        </button>
-
-                      </td>
-
-                    </tr>
-                  );
-                })}
+                      </tr>
+                    );
+                  }
+                )}
 
             </tbody>
 
@@ -1209,8 +1339,12 @@ const RoomEdit = () => {
 
         <button
           className="btn btn-success"
-          disabled={saving}
-          onClick={handleSave}
+          disabled={
+            saving
+          }
+          onClick={
+            handleSave
+          }
         >
           {saving
             ? "Saving..."

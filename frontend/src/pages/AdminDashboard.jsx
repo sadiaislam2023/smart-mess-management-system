@@ -34,9 +34,6 @@ function AdminDashboard() {
   const [pendingManagers, setPendingManagers] =
     useState([]);
 
-  const [loading, setLoading] =
-    useState(true);
-
 
   // =========================================================
   // LOAD DATA
@@ -62,8 +59,6 @@ function AdminDashboard() {
         error.response?.data?.message ||
           "Failed to load data"
       );
-    } finally {
-      setLoading(false);
     }
   };
 

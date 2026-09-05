@@ -1,10 +1,12 @@
 import {
+  useCallback,
   useEffect,
   useState,
 } from "react";
 
 import {
   useParams,
+  useNavigate,
 } from "react-router-dom";
 
 import {
@@ -28,20 +30,40 @@ const STATUS_OPTIONS = [
   "Repair Completed",
 ];
 
+const formatDateForInput = (value) => {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const year = date.getFullYear();
+  const month = String(
+    date.getMonth() + 1
+  ).padStart(2, "0");
+  const day = String(
+    date.getDate()
+  ).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+};
+
 function ManagerComplaintDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
 
   const [complaint, setComplaint] =
     useState(null);
 
-  const [error, setError] =
-    useState("");
-
   const [loading, setLoading] =
     useState(true);
 
-  const [assigning, setAssigning] =
-    useState(false);
+  const [error, setError] =
+    useState("");
 
   const [workerType, setWorkerType] =
     useState("");
@@ -55,125 +77,27 @@ function ManagerComplaintDetail() {
   const [statusChoice, setStatusChoice] =
     useState("");
 
-  const [completionFiles, setCompletionFiles] =
-    useState([]);
+  const [assigning, setAssigning] =
+    useState(false);
 
-  /* =========================================================
-     HELPERS
-  ========================================================= */
+  const [updatingStatus, setUpdatingStatus] =
+    useState(false);
 
-  const isRepairCompleted =
-    complaint?.status ===
-    "Repair Completed";
+  const [uploading, setUploading] =
+    useState(false);
 
-  const isClosed =
-    complaint?.status ===
-    "Closed";
+  /*
+    Load complaint details.
 
-  const isActionBlocked =
-    isRepairCompleted ||
-    isClosed;
+    useCallback is used so the function can safely
+    be included in the useEffect dependency array.
 
-  const getStatusBadgeClass = (
-    status
-  ) => {
-    switch (status) {
-      case "Valid":
-        return "badge bg-success";
-
-      case "Assigned":
-        return "badge bg-primary";
-
-      case "In Progress":
-        return "badge bg-warning text-dark";
-
-      case "Repair Completed":
-        return "badge bg-success";
-
-      case "Reopened":
-        return "badge bg-danger";
-
-      case "Closed":
-        return "badge bg-secondary";
-
-      default:
-        return "badge bg-secondary";
-    }
-  };
-
-  const getStatusButtonClass = () => {
-    if (isClosed) {
-      return "btn btn-secondary w-100";
-    }
-
-    if (
-      statusChoice ===
-      "Repair Completed"
-    ) {
-      return "btn btn-success w-100";
-    }
-
-    if (
-      statusChoice ===
-      "In Progress"
-    ) {
-      return "btn btn-warning w-100";
-    }
-
-    return "btn btn-primary w-100";
-  };
-
-  /* =========================================================
-     FORMAT DATE FOR DATETIME-LOCAL
-  ========================================================= */
-
-  const formatDateForInput = (
-    value
-  ) => {
-    if (!value) {
-      return "";
-    }
-
-    const date = new Date(value);
-
-    if (Number.isNaN(date.getTime())) {
-      return "";
-    }
-
-    const year =
-      date.getFullYear();
-
-    const month = String(
-      date.getMonth() + 1
-    ).padStart(2, "0");
-
-    const day = String(
-      date.getDate()
-    ).padStart(2, "0");
-
-    const hours = String(
-      date.getHours()
-    ).padStart(2, "0");
-
-    const minutes = String(
-      date.getMinutes()
-    ).padStart(2, "0");
-
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
-  };
-
-  /* =========================================================
-     LOAD COMPLAINT
-     
-     IMPORTANT:
-     This loads only once when the ID changes.
-     
-     There is NO 10-second polling because polling was
-     overwriting the assignment form while the manager
-     was typing.
-  ========================================================= */
-
-  const load = async () => {
+    This still loads only when the complaint ID changes.
+    There is NO 10-second polling because polling was
+    overwriting the assignment form while the manager
+    was typing.
+  */
+  const load = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -193,10 +117,6 @@ function ManagerComplaintDetail() {
         loadedComplaint.status || ""
       );
 
-      /*
-       * Populate worker fields only from
-       * already-saved backend data.
-       */
       if (
         loadedComplaint.assignedTo
       ) {
@@ -214,10 +134,6 @@ function ManagerComplaintDetail() {
         setWorkerName("");
       }
 
-      /*
-       * Populate target date only if
-       * it already exists.
-       */
       if (
         loadedComplaint.targetCompletionDate
       ) {
@@ -241,32 +157,14 @@ function ManagerComplaintDetail() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
     load();
-  }, [id]);
+  }, [load]);
 
-  /* =========================================================
-     ASSIGN WORKER
-  ========================================================= */
-
-  const handleAssign = async (
-    e
-  ) => {
-    e.preventDefault();
-
-    if (
-      isActionBlocked ||
-      assigning
-    ) {
-      return;
-    }
-
-    setError("");
-
-    const cleanWorkerName =
-      workerName.trim();
+  const handleAssign = async (event) => {
+    event.preventDefault();
 
     if (!workerType) {
       setError(
@@ -275,7 +173,7 @@ function ManagerComplaintDetail() {
       return;
     }
 
-    if (!cleanWorkerName) {
+    if (!workerName.trim()) {
       setError(
         "Please enter the worker name."
       );
@@ -291,99 +189,68 @@ function ManagerComplaintDetail() {
 
     try {
       setAssigning(true);
+      setError("");
 
       const data =
         await assignComplaint(
           id,
-          workerType,
-          cleanWorkerName,
-          targetDate
+          {
+            workerType,
+            workerName:
+              workerName.trim(),
+            targetCompletionDate:
+              targetDate,
+          }
         );
 
       const updatedComplaint =
         data.complaint;
 
-      /*
-       * Update complaint.
-       */
       setComplaint(
         updatedComplaint
       );
 
-      /*
-       * Keep the values in the form.
-       */
       setWorkerType(
-        updatedComplaint
-          .assignedTo?.type ||
-        workerType
+        updatedComplaint.assignedTo
+          ?.type || workerType
       );
 
       setWorkerName(
-        updatedComplaint
-          .assignedTo?.name ||
-        cleanWorkerName
+        updatedComplaint.assignedTo
+          ?.name || workerName
       );
 
-      if (
-        updatedComplaint
-          .targetCompletionDate
-      ) {
-        setTargetDate(
-          formatDateForInput(
-            updatedComplaint
-              .targetCompletionDate
-          )
-        );
-      } else {
-        /*
-         * If backend doesn't return the
-         * date, keep what the manager entered.
-         */
-        setTargetDate(
-          targetDate
-        );
-      }
-
-      setStatusChoice(
-        updatedComplaint.status ||
-        ""
+      setTargetDate(
+        updatedComplaint.targetCompletionDate
+          ? formatDateForInput(
+              updatedComplaint
+                .targetCompletionDate
+            )
+          : targetDate
       );
-
-      setError("");
     } catch (err) {
       setError(
         err.response?.data
           ?.message ||
-        "Could not assign work order."
+        "Failed to assign work order."
       );
     } finally {
       setAssigning(false);
     }
   };
 
-  /* =========================================================
-     UPDATE STATUS
-  ========================================================= */
-
-  const handleStatus = async (
-    e
-  ) => {
-    e.preventDefault();
-
-    if (isClosed) {
-      return;
-    }
-
-    if (
-      !statusChoice ||
-      statusChoice ===
-        complaint.status
-    ) {
+  const handleStatus = async () => {
+    if (!statusChoice) {
+      setError(
+        "Please select a status."
+      );
       return;
     }
 
     try {
+      setUpdatingStatus(true);
+      setError("");
+
       const data =
         await updateComplaintStatus(
           id,
@@ -395,663 +262,630 @@ function ManagerComplaintDetail() {
       );
 
       setStatusChoice(
-        data.complaint.status
+        data.complaint.status ||
+          statusChoice
       );
-
-      setError("");
     } catch (err) {
       setError(
         err.response?.data
           ?.message ||
-        "Could not update work-order status."
+        "Failed to update status."
       );
+    } finally {
+      setUpdatingStatus(false);
     }
   };
 
-  /* =========================================================
-     COMPLETION EVIDENCE
-  ========================================================= */
-
   const handleCompletionUpload =
-    async (e) => {
-      e.preventDefault();
+    async (event) => {
+      const file =
+        event.target.files?.[0];
 
-      if (isClosed) {
-        return;
-      }
-
-      if (
-        completionFiles.length ===
-        0
-      ) {
-        setError(
-          "Select at least one completion-evidence file."
-        );
+      if (!file) {
         return;
       }
 
       try {
+        setUploading(true);
+        setError("");
+
+        const formData =
+          new FormData();
+
+        formData.append(
+          "completionEvidence",
+          file
+        );
+
         const data =
           await uploadCompletionEvidence(
             id,
-            completionFiles
+            formData
           );
 
         setComplaint(
           data.complaint
         );
-
-        setCompletionFiles([]);
-
-        setError("");
       } catch (err) {
         setError(
           err.response?.data
             ?.message ||
-          "Could not upload completion evidence."
+          "Failed to upload completion evidence."
         );
+      } finally {
+        setUploading(false);
+
+        event.target.value = "";
       }
     };
 
-  /* =========================================================
-     LOADING
-  ========================================================= */
-
   if (loading) {
     return (
-      <p>
-        Loading work order...
-      </p>
+      <div className="container py-4">
+        <p>
+          Loading work order...
+        </p>
+      </div>
     );
   }
-
-  /* =========================================================
-     NOT FOUND
-  ========================================================= */
 
   if (!complaint) {
     return (
-      <div className="alert alert-danger">
-        {error ||
-          "Work order not found."}
+      <div className="container py-4">
+        <div className="alert alert-danger">
+          {error ||
+            "Work order not found."}
+        </div>
+
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={() =>
+            navigate(
+              "/manager/complaints"
+            )
+          }
+        >
+          Back to Complaints
+        </button>
       </div>
     );
   }
 
-  /* =========================================================
-     PAGE
-  ========================================================= */
+  const isCompleted =
+    complaint.status ===
+    "Repair Completed";
+
+  const isClosed =
+    complaint.status ===
+    "Closed";
+
+  const actionBlocked =
+    isCompleted || isClosed;
 
   return (
-    <div className="row">
+    <div className="container py-4">
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <div>
+          <h2 className="mb-1">
+            Work Order
+          </h2>
 
-      {/* =====================================================
-          LEFT SIDE
-      ===================================================== */}
-
-      <div className="col-md-7">
-
-        <h4>
-          Work Order #
-          {" "}
-          {complaint.ticketNumber}
-        </h4>
-
-        <div className="alert alert-success">
-          This complaint was already marked{" "}
-          <strong>
-            Valid
-          </strong>{" "}
-          by the System Administrator.
+          <p className="text-muted mb-0">
+            Ticket:{" "}
+            {complaint.ticketNumber ||
+              complaint._id}
+          </p>
         </div>
 
-        <p className="text-muted">
-          Resident identity and confidential
-          resident communication are not
-          available on this page.
-        </p>
+        <button
+          type="button"
+          className="btn btn-outline-secondary"
+          onClick={() =>
+            navigate(
+              "/manager/complaints"
+            )
+          }
+        >
+          Back
+        </button>
+      </div>
 
-        {error && (
-          <div className="alert alert-danger">
-            {error}
-          </div>
-        )}
+      {error && (
+        <div className="alert alert-danger">
+          {error}
+        </div>
+      )}
 
-        {/* WORK ORDER INFORMATION */}
+      <div className="card mb-4 shadow-sm">
+        <div className="card-header">
+          <h5 className="mb-0">
+            Complaint Information
+          </h5>
+        </div>
 
-        <div className="card mb-3">
-          <div className="card-body">
-
-            <h6>
-              Work Order Information
-            </h6>
-
-            <p>
+        <div className="card-body">
+          <div className="row">
+            <div className="col-md-6 mb-3">
               <strong>
-                Ticket:
-              </strong>{" "}
-              {complaint.ticketNumber}
-            </p>
+                Ticket Number
+              </strong>
 
-            <p>
-              <strong>
-                Location:
-              </strong>{" "}
-              {complaint.location}
-            </p>
-
-            <p>
-              <strong>
-                Category:
-              </strong>{" "}
-              {complaint.category}
-            </p>
-
-            <p>
-              <strong>
-                Priority:
-              </strong>{" "}
-
-              <span
-                className={
-                  complaint.priority ===
-                    "Emergency"
-                    ? "badge bg-danger"
-                    : complaint.priority ===
-                        "High"
-                      ? "badge bg-warning text-dark"
-                      : complaint.priority ===
-                          "Low"
-                        ? "badge bg-secondary"
-                        : "badge bg-primary"
-                }
-              >
-                {
-                  complaint.priority ||
-                  complaint.urgency ||
-                  "Medium"
-                }
-              </span>
-            </p>
-
-            <p>
-              <strong>
-                Status:
-              </strong>{" "}
-
-              <span
-                className={
-                  getStatusBadgeClass(
-                    complaint.status
-                  )
-                }
-              >
-                {complaint.status}
-              </span>
-            </p>
-
-            {complaint.targetCompletionDate && (
-              <p>
-                <strong>
-                  Target completion:
-                </strong>{" "}
-                {new Date(
-                  complaint.targetCompletionDate
-                ).toLocaleString()}
-              </p>
-            )}
-
-            {complaint.escalation
-              ?.isEscalated && (
-              <div className="alert alert-danger">
-                <strong>
-                  OVERDUE / ESCALATED
-                </strong>
-
-                <br />
-
-                {
-                  complaint.escalation
-                    .reason
-                }
+              <div>
+                {complaint.ticketNumber ||
+                  "N/A"}
               </div>
-            )}
+            </div>
 
+            <div className="col-md-6 mb-3">
+              <strong>
+                Status
+              </strong>
+
+              <div>
+                <span className="badge bg-primary">
+                  {complaint.status ||
+                    "N/A"}
+                </span>
+              </div>
+            </div>
+
+            <div className="col-md-6 mb-3">
+              <strong>
+                Category
+              </strong>
+
+              <div>
+                {complaint.category ||
+                  "N/A"}
+              </div>
+            </div>
+
+            <div className="col-md-6 mb-3">
+              <strong>
+                Location
+              </strong>
+
+              <div>
+                {complaint.location ||
+                  "N/A"}
+              </div>
+            </div>
           </div>
-        </div>
 
-        {/* PROBLEM DESCRIPTION */}
+          <hr />
 
-        <div className="card mb-3">
-          <div className="card-body">
+          <div>
+            <strong>
+              Complaint Description
+            </strong>
 
-            <h6>
-              Problem Description
-            </h6>
-
-            <p>
-              {complaint.description}
+            <p className="mt-2 mb-0">
+              {complaint.description ||
+                "No description provided."}
             </p>
-
           </div>
         </div>
+      </div>
 
-        {/* COMPLAINT EVIDENCE */}
-
-        {complaint.evidence
-          ?.length > 0 && (
-          <div className="card mb-3">
-            <div className="card-body">
-
-              <h6>
+      {complaint.evidence &&
+        complaint.evidence.length >
+          0 && (
+          <div className="card mb-4 shadow-sm">
+            <div className="card-header">
+              <h5 className="mb-0">
                 Complaint Evidence
-              </h6>
+              </h5>
+            </div>
 
+            <div className="card-body">
               <div className="row">
-
                 {complaint.evidence.map(
-                  (
-                    item,
-                    index
-                  ) => (
+                  (item, index) => (
                     <div
-                      className="col-md-6 mb-3"
+                      className="col-md-4 mb-3"
                       key={
                         item.public_id ||
+                        item.url ||
                         index
                       }
                     >
-
-                      {item.type ===
-                      "video" ? (
-                        <video
-                          src={
-                            item.url
-                          }
-                          controls
-                          className="w-100 rounded"
-                        />
-                      ) : (
-                        <img
-                          src={
-                            item.url
-                          }
-                          alt="Complaint evidence"
-                          className="img-fluid rounded"
-                        />
+                      {item.url && (
+                        <a
+                          href={item.url}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          <img
+                            src={item.url}
+                            alt={`Evidence ${
+                              index + 1
+                            }`}
+                            className="img-fluid rounded border"
+                          />
+                        </a>
                       )}
-
                     </div>
                   )
                 )}
-
               </div>
-
             </div>
           </div>
         )}
 
-        {/* COMPLETION EVIDENCE */}
-
-        {complaint
-          .completionEvidence
-          ?.length > 0 && (
-          <div className="card mb-3 border-success">
-            <div className="card-body">
-
-              <h6>
-                Repair Completion Evidence
-              </h6>
-
-              <div className="row">
-
-                {complaint
-                  .completionEvidence
-                  .map(
-                    (
-                      item,
-                      index
-                    ) => (
-                      <div
-                        className="col-md-6 mb-3"
-                        key={
-                          item.public_id ||
-                          index
-                        }
-                      >
-
-                        {item.type ===
-                        "video" ? (
-                          <video
-                            src={
-                              item.url
-                            }
-                            controls
-                            className="w-100 rounded"
-                          />
-                        ) : (
-                          <img
-                            src={
-                              item.url
-                            }
-                            alt="Repair completion evidence"
-                            className="img-fluid rounded"
-                          />
-                        )}
-
-                      </div>
-                    )
-                  )}
-
-              </div>
-
-            </div>
-          </div>
-        )}
-
-        {/* TIMELINE */}
-
-        <ComplaintTimeline
-          complaint={
-            complaint
-          }
-        />
-
-      </div>
-
-      {/* =====================================================
-          RIGHT SIDE
-      ===================================================== */}
-
-      <div className="col-md-5">
-
-        {/* ===================================================
-            ASSIGN WORKER
-        =================================================== */}
-
-        <div className="card mb-3">
-          <div className="card-body">
-
-            <h6>
-              Assign Worker
-            </h6>
-
-            <form
-              onSubmit={
-                handleAssign
-              }
-            >
-
-              {/* WORKER TYPE */}
-
-              <label className="form-label">
-                Worker Type
-              </label>
-
-              <select
-                className="form-select mb-3"
-                value={
-                  workerType
-                }
-                onChange={(e) =>
-                  setWorkerType(
-                    e.target.value
-                  )
-                }
-                disabled={
-                  isActionBlocked ||
-                  assigning
-                }
-              >
-
-                <option value="">
-                  Select worker type
-                </option>
-
-                {WORKER_TYPES.map(
-                  (type) => (
-                    <option
-                      key={type}
-                      value={type}
-                    >
-                      {type}
-                    </option>
-                  )
-                )}
-
-              </select>
-
-              {/* WORKER NAME */}
-
-              <label className="form-label">
-                Worker Name
-              </label>
-
-              <input
-                type="text"
-                className="form-control mb-3"
-                placeholder="Enter worker name"
-                value={
-                  workerName
-                }
-                onChange={(e) =>
-                  setWorkerName(
-                    e.target.value
-                  )
-                }
-                disabled={
-                  isActionBlocked ||
-                  assigning
-                }
-              />
-
-              {/* TARGET DATE */}
-
-              <label className="form-label">
-                Target Completion Date
-              </label>
-
-              <input
-                type="datetime-local"
-                className="form-control mb-3"
-                value={
-                  targetDate
-                }
-                onChange={(e) =>
-                  setTargetDate(
-                    e.target.value
-                  )
-                }
-                disabled={
-                  isActionBlocked ||
-                  assigning
-                }
-              />
-
-              {/* ASSIGN BUTTON */}
-
-              <button
-                type="submit"
-                className="btn btn-primary w-100"
-                disabled={
-                  isActionBlocked ||
-                  assigning ||
-                  !workerType ||
-                  !workerName.trim() ||
-                  !targetDate
-                }
-              >
-                {assigning
-                  ? "Assigning..."
-                  : "Assign Work Order"}
-              </button>
-
-            </form>
-
-          </div>
+      <div className="card mb-4 shadow-sm">
+        <div className="card-header">
+          <h5 className="mb-0">
+            Work Order Assignment
+          </h5>
         </div>
 
-        {/* ===================================================
-            STATUS
-        =================================================== */}
+        <div className="card-body">
+          {actionBlocked && (
+            <div className="alert alert-warning">
+              This work order can no longer
+              be modified because it is{" "}
+              <strong>
+                {complaint.status}
+              </strong>
+              .
+            </div>
+          )}
 
-        <div className="card mb-3">
-          <div className="card-body">
+          <form
+            onSubmit={handleAssign}
+          >
+            <div className="row">
+              <div className="col-md-4 mb-3">
+                <label
+                  htmlFor="workerType"
+                  className="form-label"
+                >
+                  Worker Type
+                </label>
 
-            <h6>
-              Work Order Status
-            </h6>
-
-            <form
-              onSubmit={
-                handleStatus
-              }
-            >
-
-              <select
-                className="form-select mb-3"
-                value={
-                  statusChoice
-                }
-                onChange={(e) =>
-                  setStatusChoice(
-                    e.target.value
-                  )
-                }
-                disabled={
-                  isClosed
-                }
-              >
-
-                <option
-                  value={
-                    complaint.status
+                <select
+                  id="workerType"
+                  className="form-select"
+                  value={workerType}
+                  onChange={(event) =>
+                    setWorkerType(
+                      event.target.value
+                    )
+                  }
+                  disabled={
+                    assigning ||
+                    actionBlocked
                   }
                 >
-                  {
-                    complaint.status
-                  }
-                </option>
+                  <option value="">
+                    Select worker type
+                  </option>
 
-                {STATUS_OPTIONS
-                  .filter(
-                    (status) =>
-                      status !==
-                      complaint.status
-                  )
-                  .map(
-                    (status) => (
+                  {WORKER_TYPES.map(
+                    (type) => (
                       <option
-                        key={status}
-                        value={status}
+                        key={type}
+                        value={type}
                       >
-                        {status}
+                        {type}
                       </option>
                     )
                   )}
+                </select>
+              </div>
 
-              </select>
+              <div className="col-md-4 mb-3">
+                <label
+                  htmlFor="workerName"
+                  className="form-label"
+                >
+                  Worker Name
+                </label>
 
-              <button
-                type="submit"
-                className={
-                  getStatusButtonClass()
-                }
-                disabled={
-                  isClosed ||
-                  !statusChoice ||
-                  statusChoice ===
-                    complaint.status
-                }
-              >
-                Update Status
-              </button>
+                <input
+                  id="workerName"
+                  type="text"
+                  className="form-control"
+                  value={workerName}
+                  onChange={(event) =>
+                    setWorkerName(
+                      event.target.value
+                    )
+                  }
+                  placeholder="Enter worker name"
+                  disabled={
+                    assigning ||
+                    actionBlocked
+                  }
+                />
+              </div>
 
-            </form>
+              <div className="col-md-4 mb-3">
+                <label
+                  htmlFor="targetDate"
+                  className="form-label"
+                >
+                  Target Completion Date
+                </label>
 
-          </div>
-        </div>
+                <input
+                  id="targetDate"
+                  type="date"
+                  className="form-control"
+                  value={targetDate}
+                  onChange={(event) =>
+                    setTargetDate(
+                      event.target.value
+                    )
+                  }
+                  disabled={
+                    assigning ||
+                    actionBlocked
+                  }
+                />
+              </div>
+            </div>
 
-        {/* ===================================================
-            COMPLETION EVIDENCE
-        =================================================== */}
-
-        <div className="card mb-3 border-success">
-          <div className="card-body">
-
-            <h6>
-              Repair Completion Evidence
-            </h6>
-
-            <p className="text-muted small">
-              Upload evidence after the assigned
-              maintenance person completes the
-              repair.
-            </p>
-
-            <form
-              onSubmit={
-                handleCompletionUpload
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={
+                assigning ||
+                actionBlocked
               }
             >
+              {assigning
+                ? "Assigning..."
+                : "Assign / Update Work Order"}
+            </button>
+          </form>
+        </div>
+      </div>
 
-              <input
-                type="file"
-                className="form-control mb-3"
-                multiple
-                accept="image/*,video/*"
-                onChange={(e) =>
-                  setCompletionFiles(
-                    Array.from(
-                      e.target.files
-                    )
+      <div className="card mb-4 shadow-sm">
+        <div className="card-header">
+          <h5 className="mb-0">
+            Update Status
+          </h5>
+        </div>
+
+        <div className="card-body">
+          <div className="row align-items-end">
+            <div className="col-md-6 mb-3">
+              <label
+                htmlFor="statusChoice"
+                className="form-label"
+              >
+                Status
+              </label>
+
+              <select
+                id="statusChoice"
+                className="form-select"
+                value={statusChoice}
+                onChange={(event) =>
+                  setStatusChoice(
+                    event.target.value
                   )
                 }
                 disabled={
-                  isClosed
-                }
-              />
-
-              <button
-                type="submit"
-                className="btn btn-success w-100"
-                disabled={
-                  isClosed
+                  updatingStatus ||
+                  actionBlocked
                 }
               >
-                Upload Completion Evidence
+                <option value="">
+                  Select status
+                </option>
+
+                {STATUS_OPTIONS.map(
+                  (status) => (
+                    <option
+                      key={status}
+                      value={status}
+                    >
+                      {status}
+                    </option>
+                  )
+                )}
+              </select>
+            </div>
+
+            <div className="col-md-6 mb-3">
+              <button
+                type="button"
+                className="btn btn-success"
+                onClick={handleStatus}
+                disabled={
+                  updatingStatus ||
+                  actionBlocked ||
+                  !statusChoice
+                }
+              >
+                {updatingStatus
+                  ? "Updating..."
+                  : "Update Status"}
               </button>
-
-            </form>
-
+            </div>
           </div>
         </div>
+      </div>
 
-        {/* ===================================================
-            REPAIR COMPLETED
-        =================================================== */}
+      <div className="card mb-4 shadow-sm">
+        <div className="card-header">
+          <h5 className="mb-0">
+            Completion Evidence
+          </h5>
+        </div>
 
-        {complaint.status ===
-          "Repair Completed" && (
-          <div className="alert alert-info">
-            Waiting for the anonymous resident
-            to verify the repair using the
-            private token.
+        <div className="card-body">
+          {complaint.completionEvidence &&
+            complaint.completionEvidence
+              .length > 0 && (
+              <div className="row mb-3">
+                {complaint.completionEvidence.map(
+                  (item, index) => (
+                    <div
+                      className="col-md-4 mb-3"
+                      key={
+                        item.public_id ||
+                        item.url ||
+                        index
+                      }
+                    >
+                      {item.url && (
+                        <a
+                          href={item.url}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          <img
+                            src={item.url}
+                            alt={`Completion evidence ${
+                              index + 1
+                            }`}
+                            className="img-fluid rounded border"
+                          />
+                        </a>
+                      )}
+                    </div>
+                  )
+                )}
+              </div>
+            )}
+
+          <label
+            htmlFor="completionEvidence"
+            className="form-label"
+          >
+            Upload Completion Evidence
+          </label>
+
+          <input
+            id="completionEvidence"
+            type="file"
+            className="form-control"
+            accept="image/*"
+            onChange={
+              handleCompletionUpload
+            }
+            disabled={
+              uploading ||
+              actionBlocked
+            }
+          />
+
+          {uploading && (
+            <div className="mt-2 text-muted">
+              Uploading completion
+              evidence...
+            </div>
+          )}
+        </div>
+      </div>
+
+      {isCompleted && (
+        <div className="alert alert-success mb-4">
+          <strong>
+            Repair Completed
+          </strong>
+
+          <div className="mt-1">
+            The manager has marked this
+            work order as completed.
           </div>
-        )}
+        </div>
+      )}
 
-        {/* ===================================================
-            CLOSED
-        =================================================== */}
+      {isClosed && (
+        <div className="alert alert-secondary mb-4">
+          <strong>
+            Work Order Closed
+          </strong>
 
-        {complaint.status ===
-          "Closed" && (
-          <div className="alert alert-success">
-            Resident confirmed that the repair
-            was resolved.
+          <div className="mt-1">
+            This work order has been
+            closed and can no longer be
+            modified.
           </div>
-        )}
+        </div>
+      )}
 
+      <div className="card shadow-sm mb-4">
+        <div className="card-header">
+          <h5 className="mb-0">
+            Work Order Information
+          </h5>
+        </div>
+
+        <div className="card-body">
+          <div className="row">
+            <div className="col-md-6 mb-3">
+              <strong>
+                Assigned Worker
+              </strong>
+
+              <div>
+                {complaint.assignedTo
+                  ?.name ||
+                  "Not assigned"}
+              </div>
+            </div>
+
+            <div className="col-md-6 mb-3">
+              <strong>
+                Worker Type
+              </strong>
+
+              <div>
+                {complaint.assignedTo
+                  ?.type ||
+                  "Not assigned"}
+              </div>
+            </div>
+
+            <div className="col-md-6 mb-3">
+              <strong>
+                Target Completion Date
+              </strong>
+
+              <div>
+                {complaint.targetCompletionDate
+                  ? new Date(
+                      complaint.targetCompletionDate
+                    ).toLocaleDateString()
+                  : "Not set"}
+              </div>
+            </div>
+
+            <div className="col-md-6 mb-3">
+              <strong>
+                Current Status
+              </strong>
+
+              <div>
+                {complaint.status ||
+                  "N/A"}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="card shadow-sm">
+        <div className="card-header">
+          <h5 className="mb-0">
+            Complaint Timeline
+          </h5>
+        </div>
+
+        <div className="card-body">
+          <ComplaintTimeline
+            timeline={
+              complaint.timeline || []
+            }
+          />
+        </div>
       </div>
     </div>
   );

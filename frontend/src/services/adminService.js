@@ -1,40 +1,37 @@
-import axios from "axios";
-
-const API = "http://localhost:5000/api/admin";
-
-/* =========================
-   AUTH HEADER
-========================= */
-const authHeader = () => ({
-  headers: {
-    Authorization: `Bearer ${localStorage.getItem("token")}`,
-  },
-});
+import API from "./api";
 
 /* =========================
    GET ALL USERS
 ========================= */
+
 export const getAllUsers = async () => {
-  const res = await axios.get(`${API}/users`, authHeader());
+  const res = await API.get("/admin/users");
+
   return res.data;
 };
 
 /* =========================
    GET PENDING MANAGERS
 ========================= */
+
 export const getPendingManagers = async () => {
-  const res = await axios.get(`${API}/pending-managers`, authHeader());
+  const res = await API.get(
+    "/admin/pending-managers"
+  );
+
   return res.data;
 };
 
 /* =========================
    APPROVE MANAGER
 ========================= */
-export const approveManager = async (id) => {
-  const res = await axios.put(
-    `${API}/approve/${id}`,
-    {},
-    authHeader()
+
+export const approveManager = async (
+  id
+) => {
+  const res = await API.put(
+    `/admin/approve/${id}`,
+    {}
   );
 
   return res.data;
@@ -43,11 +40,13 @@ export const approveManager = async (id) => {
 /* =========================
    REJECT MANAGER
 ========================= */
-export const rejectManager = async (id) => {
-  const res = await axios.put(
-    `${API}/reject/${id}`,
-    {},
-    authHeader()
+
+export const rejectManager = async (
+  id
+) => {
+  const res = await API.put(
+    `/admin/reject/${id}`,
+    {}
   );
 
   return res.data;
@@ -56,11 +55,13 @@ export const rejectManager = async (id) => {
 /* =========================
    BLOCK USER
 ========================= */
-export const blockUser = async (id) => {
-  const res = await axios.put(
-    `${API}/block/${id}`,
-    {},
-    authHeader()
+
+export const blockUser = async (
+  id
+) => {
+  const res = await API.put(
+    `/admin/block/${id}`,
+    {}
   );
 
   return res.data;
@@ -69,11 +70,13 @@ export const blockUser = async (id) => {
 /* =========================
    UNBLOCK USER
 ========================= */
-export const unblockUser = async (id) => {
-  const res = await axios.put(
-    `${API}/unblock/${id}`,
-    {},
-    authHeader()
+
+export const unblockUser = async (
+  id
+) => {
+  const res = await API.put(
+    `/admin/unblock/${id}`,
+    {}
   );
 
   return res.data;

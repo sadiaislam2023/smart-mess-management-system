@@ -1,130 +1,57 @@
-import axios from "axios";
-
-const API = "http://localhost:5000/api/profile";
-
+import API from "./api";
 
 // ===============================
 // Get Profile
 // ===============================
 export const getProfile = async () => {
-
-  const token = localStorage.getItem("token");
-
-  const res = await axios.get(
-    API,
-    {
-      headers:{
-        Authorization:`Bearer ${token}`,
-      },
-    }
-  );
-
+  const res = await API.get("/profile");
 
   return res.data;
-
 };
-
-
-
 
 // ===============================
 // Update Profile
 // ===============================
-export const updateProfile = async (profile)=>{
-
-
-  const token = localStorage.getItem("token");
-
-
+export const updateProfile = async (profile) => {
   const formData = new FormData();
-
-
 
   formData.append(
     "name",
     profile.name
   );
 
-
-
   formData.append(
     "notificationPreference",
     profile.notificationPreference
   );
 
-
-
-  if(
+  if (
     profile.profilePhoto instanceof File
-  ){
-
+  ) {
     formData.append(
       "profilePhoto",
       profile.profilePhoto
     );
-
   }
 
-
-
-  const res = await axios.put(
-
-    `${API}/update`,
-
-    formData,
-
-    {
-
-      headers:{
-
-        Authorization:
-        `Bearer ${token}`,
-
-      },
-
-    }
-
+  const res = await API.put(
+    "/profile/update",
+    formData
   );
 
-
   return res.data;
-
-
 };
-
-
-
 
 // ===============================
 // Change Password
 // ===============================
-export const changePassword = async(passwordData)=>{
+export const changePassword = async (
+  passwordData
+) => {
+  const res = await API.put(
+    "/profile/change-password",
+    passwordData
+  );
 
-
-const token = localStorage.getItem("token");
-
-
-const res = await axios.put(
-
-`${API}/change-password`,
-
-passwordData,
-
-{
-
-headers:{
-
-Authorization:
-`Bearer ${token}`,
-
-},
-
-}
-
-);
-
-
-return res.data;
-
-
+  return res.data;
 };

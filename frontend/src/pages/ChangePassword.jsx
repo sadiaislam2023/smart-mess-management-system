@@ -1,5 +1,6 @@
 import { useState } from "react";
-import axios from "axios";
+
+import API from "../services/api";
 
 function ChangePassword() {
   const [form, setForm] = useState({
@@ -10,6 +11,9 @@ function ChangePassword() {
 
   const [message, setMessage] = useState("");
 
+  const [messageType, setMessageType] =
+    useState("info");
+
   const handleChange = (e) => {
     setForm({
       ...form,
@@ -19,30 +23,41 @@ function ChangePassword() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setMessage("");
 
-    if (form.newPassword !== form.confirmPassword) {
-      setMessage("New password and confirm password do not match.");
+    setMessage("");
+    setMessageType("info");
+
+    if (
+      form.newPassword !==
+      form.confirmPassword
+    ) {
+      setMessage(
+        "New password and confirm password do not match."
+      );
+
+      setMessageType("danger");
+
       return;
     }
 
     try {
-      const token = localStorage.getItem("token");
+      const res = await API.post(
+        "/auth/change-password",
+        {
+          currentPassword:
+            form.currentPassword,
 
-      const res = await axios.post(
-        "http://localhost:5000/api/auth/change-password",
-        {
-          currentPassword: form.currentPassword,
-          newPassword: form.newPassword,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          newPassword:
+            form.newPassword,
         }
       );
 
-      setMessage(res.data.message || "Password changed successfully.");
+      setMessage(
+        res.data.message ||
+          "Password changed successfully."
+      );
+
+      setMessageType("success");
 
       setForm({
         currentPassword: "",
@@ -51,64 +66,100 @@ function ChangePassword() {
       });
     } catch (error) {
       setMessage(
-        error.response?.data?.message || "Failed to change password."
+        error.response?.data?.message ||
+          "Failed to change password."
       );
+
+      setMessageType("danger");
     }
   };
 
   return (
-    <div className="container mt-5" style={{ maxWidth: "500px" }}>
+    <div
+      className="container mt-5"
+      style={{
+        maxWidth: "500px",
+      }}
+    >
       <div className="card shadow p-4">
-        <h2 className="text-center mb-4">Change Password</h2>
+        <h2 className="text-center mb-4">
+          Change Password
+        </h2>
 
         {message && (
-          <div className="alert alert-info">
+          <div
+            className={`alert alert-${messageType}`}
+          >
             {message}
           </div>
         )}
 
         <form onSubmit={handleSubmit}>
+          {/* CURRENT PASSWORD */}
 
           <div className="mb-3">
-            <label className="form-label">Current Password</label>
+            <label className="form-label">
+              Current Password
+            </label>
+
             <input
               type="password"
               className="form-control"
               name="currentPassword"
-              value={form.currentPassword}
+              value={
+                form.currentPassword
+              }
               onChange={handleChange}
               required
             />
           </div>
 
+          {/* NEW PASSWORD */}
+
           <div className="mb-3">
-            <label className="form-label">New Password</label>
+            <label className="form-label">
+              New Password
+            </label>
+
             <input
               type="password"
               className="form-control"
               name="newPassword"
-              value={form.newPassword}
+              value={
+                form.newPassword
+              }
               onChange={handleChange}
               required
             />
           </div>
 
+          {/* CONFIRM PASSWORD */}
+
           <div className="mb-3">
-            <label className="form-label">Confirm New Password</label>
+            <label className="form-label">
+              Confirm New Password
+            </label>
+
             <input
               type="password"
               className="form-control"
               name="confirmPassword"
-              value={form.confirmPassword}
+              value={
+                form.confirmPassword
+              }
               onChange={handleChange}
               required
             />
           </div>
 
-          <button type="submit" className="btn btn-primary w-100">
+          {/* SUBMIT */}
+
+          <button
+            type="submit"
+            className="btn btn-primary w-100"
+          >
             Change Password
           </button>
-
         </form>
       </div>
     </div>

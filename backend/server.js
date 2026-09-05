@@ -1,22 +1,15 @@
 require("dotenv").config();
+
 const express = require("express");
-//const dotenv = require("dotenv");
 const cors = require("cors");
 const path = require("path");
+
 const complaintRoutes = require("./routes/complaint.routes.js");
+const billingRoutes = require("./routes/billing.routes");
+const forecastRoutes = require("./routes/forecast.routes");
+const wasteRoutes = require("./routes/waste.routes");
 
-const billingRoutes =
-  require("./routes/billing.routes");
-
-const forecastRoutes =
-  require("./routes/forecast.routes");
-
-
-const wasteRoutes =
-  require("./routes/waste.routes");
-
-const connectDB =
-    require("./config/db");
+const connectDB = require("./config/db");
 
 const {
     startWaitlistJob,
@@ -26,12 +19,6 @@ const {
     startBillingReminderJob,
 } = require("./utils/billing.job");
 
-
-//dotenv.config();
-
-
-
-
 // ===========================================================
 // DATABASE
 // ===========================================================
@@ -39,40 +26,77 @@ const {
 connectDB();
 
 
-const app =
-    express();
-app.get("/api/forecast-test", (req, res) => {
-    console.log("FORECAST TEST ROUTE HIT");
-    res.json({
-        success: true,
-        message: "Forecast route is working"
-    });
-});
-
 // ===========================================================
-// MIDDLEWARE
+// APP
 // ===========================================================
 
-app.use(
-    cors()
+const app = express();
+
+
+// ===========================================================
+// TEST FORECAST ROUTE
+// ===========================================================
+
+app.get(
+    "/api/forecast-test",
+    (req, res) => {
+        console.log("FORECAST TEST ROUTE HIT");
+
+        res.json({
+            success: true,
+            message: "Forecast route is working",
+        });
+    }
 );
 
 
+// ===========================================================
+// CORS
+// ===========================================================
+
+const allowedOrigins = [
+    "http://localhost:3000",
+    "https://smart-mess-management-system-qsjc-beryl.vercel.app",
+];
+
 app.use(
-    express.json({
-        limit:
-            "15mb",
+    cors({
+        origin: function (origin, callback) {
+
+            // Allow requests without an Origin header.
+            // This is useful for Postman and server-to-server requests.
+            if (!origin) {
+                return callback(null, true);
+            }
+
+            if (allowedOrigins.includes(origin)) {
+                return callback(null, true);
+            }
+
+            return callback(
+                new Error("Not allowed by CORS")
+            );
+        },
+
+        credentials: true,
     })
 );
 
 
+// ===========================================================
+// BODY PARSERS
+// ===========================================================
+
+app.use(
+    express.json({
+        limit: "15mb",
+    })
+);
+
 app.use(
     express.urlencoded({
-        extended:
-            true,
-
-        limit:
-            "20mb",
+        extended: true,
+        limit: "20mb",
     })
 );
 
@@ -126,12 +150,11 @@ const waitlistRoutes =
 const mealPlannerRoutes =
     require("./routes/mealPlanner.routes");
 
-// FIX: this require + its app.use below were missing entirely — the whole
-// QR check-in / consumption record feature (Sadia's Feature 2) had no
-// mounted route, so every call from mealRecordService.js on the frontend
-// (checkin/qr, checkin/manual, my-history, status/:mealMenuId, etc.) would
-// 404 against the live server, regardless of how correct the controller
-// logic itself was.
+
+// ===========================================================
+// MEAL RECORD / QR CHECK-IN ROUTES
+// ===========================================================
+
 const mealRecordRoutes =
     require("./routes/meal.routes");
 
@@ -145,48 +168,40 @@ app.use(
     analyticsRoutes
 );
 
-
 app.use(
     "/api/auth",
     authRoutes
 );
-
 
 app.use(
     "/api/admin",
     adminRoutes
 );
 
-
 app.use(
     "/api/profile",
     profileRoutes
 );
-
 
 app.use(
     "/api/rooms",
     roomRoutes
 );
 
-
 app.use(
     "/api/onboarding",
     onboardingRoutes
 );
-
 
 app.use(
     "/api/spacefit",
     spaceFitRoutes
 );
 
-
 app.use(
     "/api/reservations",
     reservationRoutes
 );
-
 
 app.use(
     "/api/waitlist",
@@ -198,41 +213,49 @@ app.use(
     mealPlannerRoutes
 );
 
-
 app.use(
-  "/api/billing",
-  billingRoutes
+    "/api/billing",
+    billingRoutes
 );
 
 app.use(
-  "/api/forecast",
-  forecastRoutes
+    "/api/forecast",
+    forecastRoutes
 );
-
 
 app.use(
-  "/api/waste",
-  wasteRoutes
+    "/api/waste",
+    wasteRoutes
 );
 
-// FIX: newly mounted — matches the "/meal-records/..." paths already used
-// throughout mealRecordService.js on the frontend.
+
+// ===========================================================
+// MEAL RECORD ROUTES
+// ===========================================================
+
 app.use(
     "/api/meal-records",
     mealRecordRoutes
 );
 
 
-app.use("/api/complaints", complaintRoutes);
+// ===========================================================
+// COMPLAINT ROUTES
+// ===========================================================
+
+app.use(
+    "/api/complaints",
+    complaintRoutes
+);
+
 
 // ===========================================================
-// TEST
+// ROOT TEST ROUTE
 // ===========================================================
 
 app.get(
     "/",
     (req, res) => {
-
         res.send(
             "Smart Mess Management API is running..."
         );
@@ -249,7 +272,6 @@ startWaitlistJob();
 
 // ===========================================================
 // START BILLING REMINDER JOB
-// (marks bills overdue + emails reminders -- Adrija's feature)
 // ===========================================================
 
 startBillingReminderJob();
@@ -260,14 +282,12 @@ startBillingReminderJob();
 // ===========================================================
 
 const PORT =
-    process.env.PORT ||
-    5000;
-
+    process.env.PORT || 5000;
 
 app.listen(
     PORT,
+    "0.0.0.0",
     () => {
-
         console.log(
             `Server is running on port ${PORT}`
         );

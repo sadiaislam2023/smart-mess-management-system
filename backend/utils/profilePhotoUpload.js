@@ -1,5 +1,3 @@
-const path = require("path");
-
 const isCloudinaryConfigured = () => {
   return Boolean(
     process.env.CLOUDINARY_CLOUD_NAME &&
@@ -14,18 +12,34 @@ const getProfilePhotoUrl = ({
   cloudinaryUrl,
   baseUrl,
 }) => {
+  // -------------------------------------------------------
+  // CLOUDINARY
+  // -------------------------------------------------------
+
   if (cloudinaryConfigured && cloudinaryUrl) {
     return cloudinaryUrl;
   }
 
-  const normalizedBaseUrl = (baseUrl || "http://localhost:5000").replace(/\/$/, "");
-  const relativePath = file?.path ? file.path.replace(/\\/g, "/") : "";
+  // -------------------------------------------------------
+  // LOCAL / FALLBACK UPLOAD
+  // -------------------------------------------------------
+
+  const normalizedBaseUrl = (
+    baseUrl || "http://localhost:5000"
+  ).replace(/\/$/, "");
+
+  const relativePath = file?.path
+    ? file.path.replace(/\\/g, "/")
+    : "";
 
   if (!relativePath) {
     return "";
   }
 
-  const normalizedPath = relativePath.startsWith("/") ? relativePath : `/${relativePath}`;
+  const normalizedPath = relativePath.startsWith("/")
+    ? relativePath
+    : `/${relativePath}`;
+
   return `${normalizedBaseUrl}${normalizedPath}`;
 };
 

@@ -1,39 +1,57 @@
-import axios from "axios";
-
-const API = "http://localhost:5000/api/rooms";
+import API from "./api";
 
 const roomService = {
   // ================= ROOM =================
-  getRooms: () => axios.get(API),
 
-  getRoom: (id) => axios.get(`${API}/${id}`),
+  getRooms: () =>
+    API.get("/rooms"),
 
-  createRoom: (data) => axios.post(API, data),
+  getRoom: (id) =>
+    API.get(`/rooms/${id}`),
 
-  updateRoom: (id, data) => axios.put(`${API}/${id}`, data),
+  createRoom: (data) =>
+    API.post("/rooms", data),
 
-  archiveRoom: (id) => axios.patch(`${API}/${id}/archive`),
+  updateRoom: (id, data) =>
+    API.put(`/rooms/${id}`, data),
+
+  archiveRoom: (id) =>
+    API.patch(`/rooms/${id}/archive`),
 
   // ================= BEDS =================
+
   addBed: (id, data) =>
-    axios.post(`${API}/${id}/beds`, data),
+    API.post(`/rooms/${id}/beds`, data),
 
   updateBed: (id, bedId, data) =>
-    axios.put(`${API}/${id}/beds/${bedId}`, data),
+    API.put(
+      `/rooms/${id}/beds/${bedId}`,
+      data
+    ),
 
   deleteBed: (id, bedId) =>
-    axios.patch(`${API}/${id}/beds/${bedId}/archive`),
+    API.patch(
+      `/rooms/${id}/beds/${bedId}/archive`
+    ),
 
   // ================= IMAGES =================
+
   uploadImage: (formData) =>
-    axios.post(`${API}/upload`, formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    }),
+    API.post(
+      "/rooms/upload",
+      formData,
+      {
+        headers: {
+          "Content-Type":
+            "multipart/form-data",
+        },
+      }
+    ),
 
   deleteImage: (id, public_id) =>
-    axios.delete(`${API}/${id}/images/${public_id}`),
+    API.delete(
+      `/rooms/${id}/images/${public_id}`
+    ),
 };
 
 export default roomService;

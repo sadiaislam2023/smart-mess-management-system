@@ -17,26 +17,33 @@ app.use(
   cors({
     origin: (origin, callback) => {
       // Allow requests without an Origin header
-      // Example: Postman, server-to-server requests
       if (!origin) {
         return callback(null, true);
       }
 
-      // Allow configured production frontend
+      // Allow production frontend
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
 
-      // Allow Vercel preview/deployment URLs
+      // Allow all Vercel deployments for this project
       if (
-        /^https:\/\/smart-mess-management-system-qsjc-[a-z0-9-]+\.vercel\.app$/i.test(
+        /^https:\/\/smart-mess-management-system-qsjc(?:-[a-z0-9-]+)?\.vercel\.app$/i.test(
           origin
         )
       ) {
         return callback(null, true);
       }
 
-      // Reject unknown origins
+      // Allow Vercel Git branch URLs
+      if (
+        /^https:\/\/smart-mess-management-system-qsjc-git-[a-z0-9-]+-cse-474\.vercel\.app$/i.test(
+          origin
+        )
+      ) {
+        return callback(null, true);
+      }
+
       return callback(
         new Error(`Not allowed by CORS: ${origin}`)
       );
@@ -71,32 +78,13 @@ const authRoutes = require("./routes/auth.routes");
 const reservationRoutes = require("./routes/reservation.routes");
 const waitlistRoutes = require("./routes/waitlist.routes");
 
-/* =====================================
-   AUTHENTICATION
-===================================== */
-
+/* Authentication */
 app.use("/api/auth", authRoutes);
 
-/* =====================================
-   BED RESERVATION MODULE
-===================================== */
+/* Bed Reservation */
+app.use("/api/reservations", reservationRoutes);
 
-app.use(
-  "/api/reservations",
-  reservationRoutes
-);
-
-/* =====================================
-   WAITLIST MODULE
-===================================== */
-
-app.use(
-  "/api/waitlist",
-  waitlistRoutes
-);
-
-/* =====================================
-   EXPORT APP
-===================================== */
+/* Waitlist */
+app.use("/api/waitlist", waitlistRoutes);
 
 module.exports = app;

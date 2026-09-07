@@ -292,7 +292,7 @@ const RoomForm = () => {
 
           {/* ROOM LENGTH */}
           <div className="col-md-6 mb-3">
-            <label className="fw-bold">Room Length</label>
+            <label className="fw-bold">Room Length (ft)</label>
             <input
               type="number"
               className="form-control"

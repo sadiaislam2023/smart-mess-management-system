@@ -1,4 +1,4 @@
-# smart-mess-management-system
+# Smart Student Mess & SpaceFit Room Allocation System 
 
 Managing student accommodation and mess operations involves several interconnected tasks, including room and bed allocation, meal attendance, and complaint resolution.
 
